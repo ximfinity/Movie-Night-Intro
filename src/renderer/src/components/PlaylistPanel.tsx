@@ -10,7 +10,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useProject } from '../state/useProject'
 import { COUNTDOWN_SELECTION_ID } from '../state/context'
 import { createSlideItem, createVideoItem } from '@shared/factory'
-import { formatDuration } from '../lib/itemMeta'
+import { formatClockLabel, formatDuration } from '../lib/itemMeta'
 import SortableItemCard from './SortableItemCard'
 import MediaLibraryPanel from './MediaLibraryPanel'
 import './PlaylistPanel.css'
@@ -56,7 +56,7 @@ export default function PlaylistPanel(): React.JSX.Element {
           <div className="countdown-card-title">Countdown Overlay</div>
           <div className="countdown-card-subtitle">
             {countdown.enabled
-              ? `On · ${formatDuration(countdown.durationSec)} · ${countdown.position.replace('-', ' ')}`
+              ? `On · ${countdown.mode === 'clock' ? formatClockLabel(countdown.targetTime) : formatDuration(countdown.durationSec)} · ${countdown.position.replace('-', ' ')}`
               : 'Off'}
           </div>
         </div>

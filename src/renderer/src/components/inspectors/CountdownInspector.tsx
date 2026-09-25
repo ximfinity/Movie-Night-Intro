@@ -1,6 +1,19 @@
-import type { CountdownConfig, CountdownStyle, OverlayPosition } from '@shared/types'
+import type { CountdownConfig, CountdownMode, CountdownStyle, OverlayPosition } from '@shared/types'
 import { useProject } from '../../state/useProject'
 import { formatDuration } from '../../lib/itemMeta'
+
+const MODES: { value: CountdownMode; label: string; hint: string }[] = [
+  {
+    value: 'clock',
+    label: 'Target start time',
+    hint: 'Counts down to a specific time of day. Stays accurate no matter how many times the show is stopped and restarted — recommended.'
+  },
+  {
+    value: 'duration',
+    label: 'Fixed duration',
+    hint: 'Counts down a fixed length starting from whenever the show is started — restarting the show resets it back to the full time.'
+  }
+]
 
 const STYLES: { value: CountdownStyle; label: string }[] = [
   { value: 'ring', label: 'Progress ring' },
@@ -52,33 +65,61 @@ export default function CountdownInspector({
         />
       </label>
 
-      <div className="duration-row">
+      <label className="field">
+        <span className="field-label">Countdown to</span>
+        <select
+          value={config.mode}
+          onChange={(e) => updateCountdown({ mode: e.target.value as CountdownMode })}
+        >
+          {MODES.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="inspector-hint">{MODES.find((m) => m.value === config.mode)!.hint}</p>
+
+      {config.mode === 'clock' ? (
         <label className="field">
-          <span className="field-label">Minutes</span>
+          <span className="field-label">Target time (today)</span>
           <input
-            type="number"
-            min={0}
-            max={180}
-            value={minutes}
-            onChange={(e) =>
-              updateCountdown({ durationSec: Number(e.target.value) * 60 + seconds })
-            }
+            type="time"
+            value={config.targetTime}
+            onChange={(e) => updateCountdown({ targetTime: e.target.value })}
           />
         </label>
-        <label className="field">
-          <span className="field-label">Seconds</span>
-          <input
-            type="number"
-            min={0}
-            max={59}
-            value={seconds}
-            onChange={(e) =>
-              updateCountdown({ durationSec: minutes * 60 + Number(e.target.value) })
-            }
-          />
-        </label>
-      </div>
-      <p className="inspector-hint">Total: {formatDuration(config.durationSec)}</p>
+      ) : (
+        <>
+          <div className="duration-row">
+            <label className="field">
+              <span className="field-label">Minutes</span>
+              <input
+                type="number"
+                min={0}
+                max={180}
+                value={minutes}
+                onChange={(e) =>
+                  updateCountdown({ durationSec: Number(e.target.value) * 60 + seconds })
+                }
+              />
+            </label>
+            <label className="field">
+              <span className="field-label">Seconds</span>
+              <input
+                type="number"
+                min={0}
+                max={59}
+                value={seconds}
+                onChange={(e) =>
+                  updateCountdown({ durationSec: minutes * 60 + Number(e.target.value) })
+                }
+              />
+            </label>
+          </div>
+          <p className="inspector-hint">Total: {formatDuration(config.durationSec)}</p>
+        </>
+      )}
 
       <label className="field">
         <span className="field-label">Style</span>

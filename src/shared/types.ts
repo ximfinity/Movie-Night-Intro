@@ -52,11 +52,19 @@ export type PlaylistItem = VideoItem | SlideItem
 
 /** Show-wide countdown, rendered as a persistent overlay on top of whatever is playing
  * (rather than occupying a slot in the playlist), from the start of the show until it completes. */
+export type CountdownMode = 'duration' | 'clock'
+
 export interface CountdownConfig {
   enabled: boolean
   label: string
   completeLabel: string
+  /** 'duration' counts down a fixed length from whenever the show starts (resets on
+   * restart). 'clock' counts down to an absolute time of day, computed from the wall
+   * clock, so it stays correct no matter how many times the show is stopped/restarted. */
+  mode: CountdownMode
   durationSec: number
+  /** Local time of day in 24-hour "HH:mm" form, used when mode is 'clock'. */
+  targetTime: string
   holdAtZeroSec: number
   style: CountdownStyle
   position: OverlayPosition

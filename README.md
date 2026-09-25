@@ -17,11 +17,12 @@ transitions and animations.
   option to keep playing into the next slide.
 - **Video clips** — play local video files at their native length; the show
   auto-advances when each clip ends.
-- **Countdown overlay** — a fixed-duration countdown (ring, flip-clock, or pulsing
-  style) that stays on screen in a corner of your choice for the whole show, from the
-  moment it starts until it hits zero, then flashes a "let's go" message — it plays over
-  whatever video clip or slide is currently showing rather than taking its own turn in
-  the playlist.
+- **Countdown overlay** — a ring/flip-clock/pulsing countdown that stays on screen in a
+  corner of your choice for the whole show, then flashes a "let's go" message — it plays
+  over whatever video clip or slide is currently showing rather than taking its own turn
+  in the playlist. Counts down either to a **target start time** (recommended — stays
+  accurate no matter how many times you stop and restart the show) or a fixed duration
+  from whenever the show is started.
 - **Media library** — bulk-import a batch of video clips or music tracks at once, then
   reuse them: add any library video to the show with one click, or assign a library
   music track (or image) to a slide from a dropdown instead of re-opening a file picker

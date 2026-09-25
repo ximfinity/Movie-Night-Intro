@@ -1,12 +1,15 @@
 import { v4 as uuid } from 'uuid'
 import type { CountdownConfig, MediaLibrary, ProjectData, SlideItem, VideoItem } from './types'
+import { formatTimeOfDay } from './countdown'
 
 export function createDefaultCountdown(): CountdownConfig {
   return {
     enabled: true,
     label: 'The show starts in',
     completeLabel: 'Enjoy the show!',
+    mode: 'clock',
     durationSec: 300,
+    targetTime: formatTimeOfDay(new Date(Date.now() + 5 * 60_000)),
     holdAtZeroSec: 3,
     style: 'ring',
     position: 'top-right'

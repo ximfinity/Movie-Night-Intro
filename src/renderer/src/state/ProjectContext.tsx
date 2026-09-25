@@ -16,7 +16,7 @@ function normalizeProject(project: ProjectData): ProjectData {
   return {
     ...project,
     items: project.items.filter((it) => it.type === 'video' || it.type === 'slide'),
-    countdown: project.countdown ?? createDefaultCountdown(),
+    countdown: { ...createDefaultCountdown(), ...project.countdown },
     library: project.library ?? createEmptyLibrary()
   }
 }
