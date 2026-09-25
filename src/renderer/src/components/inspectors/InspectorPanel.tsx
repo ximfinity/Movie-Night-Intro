@@ -2,7 +2,7 @@ import { useProject } from '../../state/useProject'
 import { COUNTDOWN_SELECTION_ID } from '../../state/context'
 import { itemColorVar, itemIcon, itemTitle } from '../../lib/itemMeta'
 import VideoInspector from './VideoInspector'
-import SlideInspector from './SlideInspector'
+import SlideshowInspector from './SlideshowInspector'
 import CountdownInspector from './CountdownInspector'
 import './inspectors.css'
 
@@ -59,7 +59,7 @@ export default function InspectorPanel(): React.JSX.Element {
       </div>
       <div className="inspector-body">
         {item.type === 'video' && <VideoInspector item={item} />}
-        {item.type === 'slide' && <SlideInspector item={item} />}
+        {item.type === 'slideshow' && <SlideshowInspector item={item} />}
       </div>
     </div>
   )

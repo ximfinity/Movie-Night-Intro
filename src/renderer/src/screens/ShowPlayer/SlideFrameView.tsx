@@ -1,38 +1,38 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
-import type { SlideItem } from '@shared/types'
+import type { SlideFrame } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
 import { useCountdownTimer } from '../../hooks/useCountdownTimer'
-import type { BackgroundMusicController } from '../../hooks/useBackgroundMusic'
 
-export default function SlideStage({
-  item,
+function pickSubtitle(options: string[]): string {
+  const nonEmpty = options.filter((s) => s.trim().length > 0)
+  if (nonEmpty.length === 0) return ''
+  return nonEmpty[Math.floor(Math.random() * nonEmpty.length)]
+}
+
+/** Renders a single slideshow frame (text-on-background, or a full-bleed image) for its
+ * own duration, then calls onDone. Music is handled one level up by SlideshowStage, since
+ * it spans the whole rotation rather than any one frame. */
+export default function SlideFrameView({
+  frame,
   dir,
   paused,
-  music,
   onDone
 }: {
-  item: SlideItem
+  frame: SlideFrame
   dir: string
   paused: boolean
-  music: BackgroundMusicController
   onDone: () => void
 }): React.JSX.Element {
-  useCountdownTimer(item.durationSec, paused, onDone)
+  useCountdownTimer(frame.durationSec, paused, onDone)
 
-  useEffect(() => {
-    if (item.music) {
-      music.playTrack(item.music.fileName, item.music.volume, item.music.fadeInSec)
-    }
-    return () => {
-      if (item.music && !item.music.continueToNext) {
-        music.fadeOutAndStop(item.music.fadeOutSec)
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.id])
+  // Picked once per mount (i.e. fresh each time this frame is actually shown — including
+  // on a restart or manual re-visit — but stable for as long as it stays on screen).
+  const [subtitle] = useState(() => pickSubtitle(frame.subtitleOptions))
 
-  const bgImageUrl = item.backgroundImage ? mediaFileUrl(dir, 'image', item.backgroundImage) : null
+  const bgImageUrl = frame.backgroundImage
+    ? mediaFileUrl(dir, 'image', frame.backgroundImage)
+    : null
   const kenBurnsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function SlideStage({
     const tween = gsap.fromTo(
       kenBurnsRef.current,
       { scale: 1 },
-      { scale: 1.12, duration: Math.max(item.durationSec, 4), ease: 'none' }
+      { scale: 1.12, duration: Math.max(frame.durationSec, 4), ease: 'none' }
     )
     return () => {
       tween.kill()
@@ -52,11 +52,12 @@ export default function SlideStage({
   const subtitleRef = useRef<HTMLParagraphElement>(null)
 
   useEffect(() => {
+    if (frame.content !== 'text') return undefined
     const title = titleRef.current
     const subtitle = subtitleRef.current
 
-    if (item.textAnimation === 'typewriter' && title) {
-      const text = item.title
+    if (frame.textAnimation === 'typewriter' && title) {
+      const text = frame.title
       title.textContent = ''
       let i = 0
       const id = setInterval(() => {
@@ -80,9 +81,9 @@ export default function SlideStage({
     if (targets.length === 0) return undefined
 
     const fromVars: gsap.TweenVars = { opacity: 0 }
-    if (item.textAnimation === 'fade-up') fromVars.y = 24
-    if (item.textAnimation === 'slide-in') fromVars.x = -40
-    if (item.textAnimation === 'zoom-in') fromVars.scale = 0.85
+    if (frame.textAnimation === 'fade-up') fromVars.y = 24
+    if (frame.textAnimation === 'slide-in') fromVars.x = -40
+    if (frame.textAnimation === 'zoom-in') fromVars.scale = 0.85
 
     const tween = gsap.fromTo(targets, fromVars, {
       opacity: 1,
@@ -98,10 +99,24 @@ export default function SlideStage({
       tween.kill()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.id, item.textAnimation])
+  }, [frame.id, frame.content, frame.textAnimation])
+
+  if (frame.content === 'image') {
+    return (
+      <div className="stage slide-frame-image-only">
+        {bgImageUrl && (
+          <div
+            ref={kenBurnsRef}
+            className="slide-bg-image"
+            style={{ backgroundImage: `url(${bgImageUrl})` }}
+          />
+        )}
+      </div>
+    )
+  }
 
   return (
-    <div className={`stage slide-stage slide-theme-${item.theme}`}>
+    <div className={`stage slide-stage slide-theme-${frame.theme}`}>
       {bgImageUrl && (
         <div className="slide-bg-image-wrap">
           <div
@@ -114,11 +129,11 @@ export default function SlideStage({
       )}
       <div className="slide-content">
         <h1 ref={titleRef} className="slide-title">
-          {item.title}
+          {frame.title}
         </h1>
-        {item.subtitle && (
+        {subtitle && (
           <p ref={subtitleRef} className="slide-subtitle">
-            {item.subtitle}
+            {subtitle}
           </p>
         )}
       </div>

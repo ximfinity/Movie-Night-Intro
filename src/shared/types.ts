@@ -12,20 +12,45 @@ export type CountdownStyle = 'flip' | 'ring' | 'pulse'
 
 export type OverlayPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center'
 
+export type SlideMusicKind = 'audio' | 'video'
+
 export interface SlideMusic {
+  /** 'audio' plays as a plain background track. 'video' plays the clip's picture too,
+   * as a small pop-up-video-style overlay in one corner of the screen. */
+  kind: SlideMusicKind
   fileName: string
   displayName: string
   volume: number
   fadeInSec: number
   fadeOutSec: number
-  /** If true, playback continues into the next item instead of stopping/fading out here. */
-  continueToNext: boolean
+  /** Only meaningful when kind is 'video'. */
+  position: OverlayPosition
+}
+
+export type SlideFrameContent = 'text' | 'image'
+
+/** One frame within a Slideshow item. Frames rotate automatically, each for its own
+ * duration, while the slideshow's single shared music track keeps playing underneath. */
+export interface SlideFrame {
+  id: string
+  content: SlideFrameContent
+  title: string
+  /** Body text variants for this frame. When there's more than one, a single option is
+   * picked at random each time the frame is shown, while the title stays fixed. */
+  subtitleOptions: string[]
+  theme: SlideTheme
+  textAnimation: TextAnimation
+  /** Background for a text frame, or the full-bleed picture for an image frame. */
+  backgroundImage: string | null
+  backgroundImageDisplayName: string | null
+  durationSec: number
 }
 
 export interface BaseItem {
   id: string
-  type: 'video' | 'slide'
-  /** Transition used when this item enters (transitioning away from the previous item). */
+  type: 'video' | 'slideshow'
+  /** Transition used when this item enters (transitioning away from the previous item),
+   * and reused between frames when a slideshow item rotates. */
   transition: TransitionStyle
 }
 
@@ -36,19 +61,15 @@ export interface VideoItem extends BaseItem {
   volume: number
 }
 
-export interface SlideItem extends BaseItem {
-  type: 'slide'
-  title: string
-  subtitle: string
-  theme: SlideTheme
-  backgroundImage: string | null
-  backgroundImageDisplayName: string | null
-  textAnimation: TextAnimation
-  durationSec: number
+export interface SlideshowItem extends BaseItem {
+  type: 'slideshow'
+  frames: SlideFrame[]
+  /** Plays once for the whole rotation, from the moment the slideshow starts until it
+   * ends — not tied to any single frame. */
   music: SlideMusic | null
 }
 
-export type PlaylistItem = VideoItem | SlideItem
+export type PlaylistItem = VideoItem | SlideshowItem
 
 /** Show-wide countdown, rendered as a persistent overlay on top of whatever is playing
  * (rather than occupying a slot in the playlist), from the start of the show until it completes. */
@@ -84,7 +105,7 @@ export interface MediaLibrary {
 }
 
 export interface ProjectData {
-  formatVersion: 2
+  formatVersion: 3
   id: string
   name: string
   createdAt: string

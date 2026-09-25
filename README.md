@@ -9,14 +9,20 @@ transitions and animations.
 
 ## Features
 
-- **Playlist editor** — mix video clips and text announcement slides in any order; drag
-  to reorder.
-- **Text slides** — pick a theme (Midnight, Sunset, Popcorn, Classic), an entrance
-  animation (fade up, slide in, zoom in, typewriter), an optional background image with
-  a slow Ken Burns pan, and an optional background music track with fade in/out and the
-  option to keep playing into the next slide.
+- **Playlist editor** — mix video clips and slideshows in any order; drag to reorder.
+- **Slideshows** — a slideshow item holds one or more **slides that rotate**
+  automatically: each slide is either a **text slide** (fixed title, a theme, an entrance
+  animation, and an optional background image or GIF) or a full-bleed **image/GIF
+  slide**. A text slide's body text can hold several variations — one is picked at
+  random each time the slide is shown, while the title stays fixed. One **music or
+  pop-up video** selector covers the whole rotating group: an audio track plays quietly
+  underneath, or a video plays with its picture too, in a small corner box (like a
+  pop-up video) while the slides rotate. Use the ⧉ button on any slide to duplicate it in
+  place and copy it for reuse — a **+ Paste** button then appears in any other
+  slideshow's slide list.
 - **Video clips** — play local video files at their native length; the show
-  auto-advances when each clip ends.
+  auto-advances when each clip ends. Starting a video immediately cuts any playing
+  background music or pop-up video so they never talk over each other.
 - **Countdown overlay** — a ring/flip-clock/pulsing countdown that stays on screen in a
   corner of your choice for the whole show, then flashes a "let's go" message — it plays
   over whatever video clip or slide is currently showing rather than taking its own turn
@@ -80,7 +86,9 @@ src/
    screen position (or turn it off).
 3. Optionally bulk-import a batch of clips/tracks in the **Media Library** section, then
    add library videos to the show or assign library music/images to slides.
-4. Add **Video Clips** and **Text Slides** to build the playlist — drag to reorder.
+4. Add **Video Clips** and **Text Slides** to build the playlist — drag to reorder. Open a
+   slideshow's settings to add more rotating slides, mark a slide as an image instead of
+   text, add random body-text variations, or set its shared music/pop-up video.
 5. Click a playlist item to edit its settings in the right-hand panel (text, theme,
    background image, music, transition, etc.).
 6. **Save** (or `Ctrl+S`), then **Start Show** to go fullscreen and run it automatically.

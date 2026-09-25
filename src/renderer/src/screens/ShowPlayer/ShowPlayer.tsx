@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PlaylistItem } from '@shared/types'
 import { useProject } from '../../state/useProject'
 import { useBackgroundMusic, type BackgroundMusicController } from '../../hooks/useBackgroundMusic'
 import TransitionLayer from './TransitionLayer'
 import { enterDurationMs } from './transitions'
 import VideoStage from './VideoStage'
-import SlideStage from './SlideStage'
+import SlideshowStage from './SlideshowStage'
 import CountdownOverlay from './CountdownOverlay'
+import PopupVideoOverlay, { type PopupVideoHandle } from './PopupVideoOverlay'
 import ShowHud from './ShowHud'
 import './showplayer.css'
 
@@ -20,19 +21,40 @@ function StageFor({
   dir,
   paused,
   music,
+  popupVideoRef,
+  stopBackgroundAudio,
   onDone
 }: {
   item: PlaylistItem
   dir: string
   paused: boolean
   music: BackgroundMusicController
+  popupVideoRef: React.RefObject<PopupVideoHandle | null>
+  stopBackgroundAudio: () => void
   onDone: () => void
 }): React.JSX.Element {
   switch (item.type) {
     case 'video':
-      return <VideoStage item={item} dir={dir} paused={paused} onDone={onDone} />
-    case 'slide':
-      return <SlideStage item={item} dir={dir} paused={paused} music={music} onDone={onDone} />
+      return (
+        <VideoStage
+          item={item}
+          dir={dir}
+          paused={paused}
+          stopBackgroundAudio={stopBackgroundAudio}
+          onDone={onDone}
+        />
+      )
+    case 'slideshow':
+      return (
+        <SlideshowStage
+          item={item}
+          dir={dir}
+          paused={paused}
+          music={music}
+          popupVideoRef={popupVideoRef}
+          onDone={onDone}
+        />
+      )
   }
 }
 
@@ -40,11 +62,17 @@ export default function ShowPlayer({ onExit }: { onExit: () => void }): React.JS
   const { project, dir } = useProject()
   const items = project!.items
   const music = useBackgroundMusic(dir!)
+  const popupVideoRef = useRef<PopupVideoHandle>(null)
 
   const [stack, setStack] = useState<StackEntry[]>(() => [{ key: 0, item: items[0] }])
   const [paused, setPaused] = useState(false)
   const [ending, setEnding] = useState(false)
   const advancingRef = useRef(false)
+
+  const stopBackgroundAudio = useCallback(() => {
+    music.stopImmediately()
+    popupVideoRef.current?.stopImmediately()
+  }, [music])
 
   useEffect(() => {
     window.api.setFullscreen(true)
@@ -120,11 +148,14 @@ export default function ShowPlayer({ onExit }: { onExit: () => void }): React.JS
               dir={dir!}
               paused={paused && isTop}
               music={music}
+              popupVideoRef={popupVideoRef}
+              stopBackgroundAudio={stopBackgroundAudio}
               onDone={() => advance(layer.key)}
             />
           </TransitionLayer>
         )
       })}
+      <PopupVideoOverlay ref={popupVideoRef} dir={dir!} paused={paused} />
       <CountdownOverlay config={project!.countdown} paused={paused} />
       {ending && <div className="show-fade-black" />}
       <ShowHud paused={paused} />

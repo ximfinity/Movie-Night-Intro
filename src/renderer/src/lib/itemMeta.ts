@@ -4,7 +4,7 @@ export function itemIcon(type: PlaylistItem['type']): string {
   switch (type) {
     case 'video':
       return '🎬'
-    case 'slide':
+    case 'slideshow':
       return '📝'
   }
 }
@@ -13,7 +13,7 @@ export function itemColorVar(type: PlaylistItem['type']): string {
   switch (type) {
     case 'video':
       return 'var(--video-color)'
-    case 'slide':
+    case 'slideshow':
       return 'var(--slide-color)'
   }
 }
@@ -22,8 +22,15 @@ export function itemTitle(item: PlaylistItem): string {
   switch (item.type) {
     case 'video':
       return item.displayName || 'Video clip'
-    case 'slide':
-      return item.title || 'Untitled slide'
+    case 'slideshow': {
+      const first = item.frames[0]
+      if (item.frames.length === 1) {
+        return first.content === 'image'
+          ? first.backgroundImageDisplayName || 'Image slide'
+          : first.title || 'Untitled slide'
+      }
+      return `Slideshow — ${item.frames.length} slides`
+    }
   }
 }
 
@@ -31,10 +38,11 @@ export function itemSubtitle(item: PlaylistItem): string {
   switch (item.type) {
     case 'video':
       return `Video · volume ${Math.round(item.volume * 100)}%`
-    case 'slide': {
-      const bits = [`${item.durationSec}s`]
+    case 'slideshow': {
+      const totalSec = item.frames.reduce((sum, f) => sum + f.durationSec, 0)
+      const bits = [`${totalSec}s`]
       if (item.music) bits.push('with music')
-      if (item.backgroundImage) bits.push('with image')
+      if (item.frames.some((f) => f.backgroundImage)) bits.push('with image')
       return bits.join(' · ')
     }
   }

@@ -6,17 +6,20 @@ export default function VideoStage({
   item,
   dir,
   paused,
+  stopBackgroundAudio,
   onDone
 }: {
   item: VideoItem
   dir: string
   paused: boolean
+  stopBackgroundAudio: () => void
   onDone: () => void
 }): React.JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null)
   const src = useMemo(() => mediaFileUrl(dir, 'video', item.fileName), [dir, item.fileName])
 
   useEffect(() => {
+    stopBackgroundAudio()
     const el = videoRef.current
     if (!el) return
     el.volume = item.volume

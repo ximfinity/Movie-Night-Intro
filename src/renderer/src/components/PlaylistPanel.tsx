@@ -9,7 +9,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useProject } from '../state/useProject'
 import { COUNTDOWN_SELECTION_ID } from '../state/context'
-import { createSlideItem, createVideoItem } from '@shared/factory'
+import { createSlideshowItem, createVideoItem } from '@shared/factory'
 import { formatClockLabel, formatDuration } from '../lib/itemMeta'
 import SortableItemCard from './SortableItemCard'
 import MediaLibraryPanel from './MediaLibraryPanel'
@@ -33,7 +33,7 @@ export default function PlaylistPanel(): React.JSX.Element {
   }
 
   function handleAddSlide(): void {
-    addItem(createSlideItem())
+    addItem(createSlideshowItem())
   }
 
   function handleDragEnd(event: DragEndEvent): void {
@@ -62,36 +62,45 @@ export default function PlaylistPanel(): React.JSX.Element {
         </div>
       </button>
 
-      <MediaLibraryPanel />
+      <div className="playlist-scroll">
+        <MediaLibraryPanel />
 
-      <div className="playlist-add-row">
-        <button className="btn add-btn add-video" onClick={handleAddVideo}>
-          🎬 Video Clip
-        </button>
-        <button className="btn add-btn add-slide" onClick={handleAddSlide}>
-          📝 Text Slide
-        </button>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="playlist-empty">
-          <p>Your playlist is empty.</p>
-          <p className="playlist-empty-hint">
-            Add video clips and announcement slides below — the countdown overlay above plays on top
-            automatically, so you don&apos;t need to add it here.
-          </p>
+        <div className="playlist-add-row">
+          <button className="btn add-btn add-video" onClick={handleAddVideo}>
+            🎬 Video Clip
+          </button>
+          <button className="btn add-btn add-slide" onClick={handleAddSlide}>
+            📝 Text Slide
+          </button>
         </div>
-      ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map((it) => it.id)} strategy={verticalListSortingStrategy}>
-            <ul className="playlist-list">
-              {items.map((item, index) => (
-                <SortableItemCard key={item.id} item={item} index={index} />
-              ))}
-            </ul>
-          </SortableContext>
-        </DndContext>
-      )}
+
+        {items.length === 0 ? (
+          <div className="playlist-empty">
+            <p>Your playlist is empty.</p>
+            <p className="playlist-empty-hint">
+              Add video clips and announcement slides below — the countdown overlay above plays on
+              top automatically, so you don&apos;t need to add it here.
+            </p>
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={items.map((it) => it.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="playlist-list">
+                {items.map((item, index) => (
+                  <SortableItemCard key={item.id} item={item} index={index} />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
     </div>
   )
 }

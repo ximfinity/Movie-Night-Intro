@@ -34,6 +34,53 @@
   background: #000;
 }
 
+/* Pop-up video (video used as a slideshow's "music") */
+
+.popup-video {
+  position: absolute;
+  z-index: 14;
+  width: 260px;
+  height: 170px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-2);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #000;
+  animation: overlayIn 0.5s ease;
+}
+
+.popup-video-hidden {
+  display: none;
+}
+
+.popup-video video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.popup-video-top-left {
+  top: 28px;
+  left: 28px;
+}
+.popup-video-top-right {
+  top: 28px;
+  right: 28px;
+}
+.popup-video-bottom-left {
+  bottom: 28px;
+  left: 28px;
+}
+.popup-video-bottom-right {
+  bottom: 28px;
+  right: 28px;
+}
+.popup-video-center {
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 /* Slide themes */
 
 .slide-stage {
@@ -81,6 +128,12 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+.slide-frame-image-only {
+  position: relative;
+  overflow: hidden;
+  background: #000;
 }
 
 .slide-content {

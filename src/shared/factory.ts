@@ -1,5 +1,13 @@
 import { v4 as uuid } from 'uuid'
-import type { CountdownConfig, MediaLibrary, ProjectData, SlideItem, VideoItem } from './types'
+import type {
+  CountdownConfig,
+  MediaLibrary,
+  ProjectData,
+  SlideFrame,
+  SlideFrameContent,
+  SlideshowItem,
+  VideoItem
+} from './types'
 import { formatTimeOfDay } from './countdown'
 
 export function createDefaultCountdown(): CountdownConfig {
@@ -23,7 +31,7 @@ export function createEmptyLibrary(): MediaLibrary {
 export function createEmptyProject(name: string): ProjectData {
   const now = new Date().toISOString()
   return {
-    formatVersion: 2,
+    formatVersion: 3,
     id: uuid(),
     name,
     createdAt: now,
@@ -45,18 +53,26 @@ export function createVideoItem(fileName: string, displayName: string): VideoIte
   }
 }
 
-export function createSlideItem(): SlideItem {
+export function createSlideFrame(content: SlideFrameContent = 'text'): SlideFrame {
   return {
     id: uuid(),
-    type: 'slide',
-    transition: 'crossfade',
-    title: 'New Announcement',
-    subtitle: '',
+    content,
+    title: content === 'text' ? 'New Announcement' : '',
+    subtitleOptions: [''],
     theme: 'midnight',
+    textAnimation: 'fade-up',
     backgroundImage: null,
     backgroundImageDisplayName: null,
-    textAnimation: 'fade-up',
-    durationSec: 6,
+    durationSec: 6
+  }
+}
+
+export function createSlideshowItem(): SlideshowItem {
+  return {
+    id: uuid(),
+    type: 'slideshow',
+    transition: 'crossfade',
+    frames: [createSlideFrame('text')],
     music: null
   }
 }
