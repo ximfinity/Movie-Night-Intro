@@ -81,14 +81,30 @@ export default function CountdownInspector({
       <p className="inspector-hint">{MODES.find((m) => m.value === config.mode)!.hint}</p>
 
       {config.mode === 'clock' ? (
-        <label className="field">
-          <span className="field-label">Target time (today)</span>
-          <input
-            type="time"
-            value={config.targetTime}
-            onChange={(e) => updateCountdown({ targetTime: e.target.value })}
-          />
-        </label>
+        <>
+          <label className="field">
+            <span className="field-label">Target time (today)</span>
+            <input
+              type="time"
+              value={config.targetTime}
+              onChange={(e) => updateCountdown({ targetTime: e.target.value })}
+            />
+          </label>
+
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={config.loopPlaylistUntilShowtime}
+              onChange={(e) => updateCountdown({ loopPlaylistUntilShowtime: e.target.checked })}
+            />
+            Loop the playlist until showtime
+          </label>
+          <p className="inspector-hint">
+            If the playlist reaches the end before the target time arrives, start it over from the
+            top instead of ending the show — keeps something playing for however long the pre-show
+            runs.
+          </p>
+        </>
       ) : (
         <>
           <div className="duration-row">

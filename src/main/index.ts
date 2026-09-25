@@ -4,7 +4,13 @@ import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import type { ImportedMediaFile, MediaKind, OpenProjectResult, ProjectData } from '../shared/types'
+import type {
+  ImportedMediaFile,
+  MediaKind,
+  MediaRef,
+  OpenProjectResult,
+  ProjectData
+} from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -124,6 +130,13 @@ function registerIpcHandlers(): void {
         imported.push({ fileName: destName, displayName: original })
       }
       return imported
+    }
+  )
+
+  ipcMain.handle(
+    'media:checkExists',
+    async (_evt, dir: string, refs: MediaRef[]): Promise<MediaRef[]> => {
+      return refs.filter((ref) => !existsSync(join(dir, MEDIA_SUBDIR[ref.kind], ref.fileName)))
     }
   )
 

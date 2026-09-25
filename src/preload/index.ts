@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { ImportedMediaFile, MediaKind, OpenProjectResult, ProjectData } from '../shared/types'
+import type {
+  ImportedMediaFile,
+  MediaKind,
+  MediaRef,
+  OpenProjectResult,
+  ProjectData
+} from '../shared/types'
 
 const api = {
   selectNewProjectFolder: (): Promise<string | null> =>
@@ -11,6 +17,8 @@ const api = {
     ipcRenderer.invoke('project:save', dir, project),
   importMedia: (dir: string, kind: MediaKind): Promise<ImportedMediaFile[]> =>
     ipcRenderer.invoke('media:import', dir, kind),
+  checkMediaExists: (dir: string, refs: MediaRef[]): Promise<MediaRef[]> =>
+    ipcRenderer.invoke('media:checkExists', dir, refs),
   setFullscreen: (flag: boolean): Promise<void> => ipcRenderer.invoke('app:setFullscreen', flag)
 }
 

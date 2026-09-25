@@ -98,6 +98,10 @@ export interface CountdownConfig {
   holdAtZeroSec: number
   style: CountdownStyle
   position: OverlayPosition
+  /** Only meaningful when mode is 'clock': if the playlist reaches its end before the
+   * target time arrives, restart it from the top instead of ending the show, repeating
+   * for as long as needed until showtime. */
+  loopPlaylistUntilShowtime: boolean
 }
 
 export interface ImportedMediaFile {
@@ -127,4 +131,11 @@ export interface ProjectData {
 export interface OpenProjectResult {
   dir: string
   project: ProjectData
+}
+
+/** A media file a project refers to, used to check whether it's still present on disk. */
+export interface MediaRef {
+  kind: MediaKind
+  fileName: string
+  displayName: string
 }

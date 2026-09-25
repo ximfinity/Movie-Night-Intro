@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PlaylistItem } from '@shared/types'
+import { targetTimeToEpoch } from '@shared/countdown'
 import { useProject } from '../../state/useProject'
 import { useBackgroundMusic, type BackgroundMusicController } from '../../hooks/useBackgroundMusic'
 import TransitionLayer from './TransitionLayer'
@@ -68,6 +69,19 @@ export default function ShowPlayer({ onExit }: { onExit: () => void }): React.JS
   const [paused, setPaused] = useState(false)
   const [ending, setEnding] = useState(false)
   const advancingRef = useRef(false)
+  /** How many times the playlist has looped back to the top, folded into each stack
+   * entry's key (key = loopCount * items.length + index) so keys stay unique forever. */
+  const loopCountRef = useRef(0)
+
+  // Only ever called from advance()/goTo(), themselves only reachable from event
+  // callbacks (never during render), so reading the live clock here is safe despite the
+  // purity lint rule's conservative static analysis of the enclosing component body.
+  function shouldLoopPlaylist(): boolean {
+    const cd = project!.countdown
+    if (!cd.enabled || cd.mode !== 'clock' || !cd.loopPlaylistUntilShowtime) return false
+    // eslint-disable-next-line react-hooks/purity
+    return targetTimeToEpoch(cd.targetTime) > Date.now()
+  }
 
   const stopBackgroundAudio = useCallback(() => {
     music.stopImmediately()
@@ -87,27 +101,32 @@ export default function ShowPlayer({ onExit }: { onExit: () => void }): React.JS
   }, [])
 
   const currentKey = stack[stack.length - 1].key
+  const currentIndex = currentKey % items.length
 
   function goTo(index: number): void {
     if (index < 0 || index >= items.length) return
     advancingRef.current = false
-    setStack([{ key: index, item: items[index] }])
+    setStack([{ key: loopCountRef.current * items.length + index, item: items[index] }])
   }
 
   function advance(fromKey: number): void {
     if (advancingRef.current || fromKey !== currentKey) return
-    if (fromKey + 1 >= items.length) {
+    const fromIndex = fromKey % items.length
+    const atEnd = fromIndex + 1 >= items.length
+    if (atEnd && !shouldLoopPlaylist()) {
       advancingRef.current = true
       setEnding(true)
       setTimeout(onExit, 900)
       return
     }
     advancingRef.current = true
-    const nextIndex = fromKey + 1
-    setStack((s) => [...s, { key: nextIndex, item: items[nextIndex] }])
+    if (atEnd) loopCountRef.current += 1
+    const nextIndex = atEnd ? 0 : fromIndex + 1
+    const nextKey = loopCountRef.current * items.length + nextIndex
+    setStack((s) => [...s, { key: nextKey, item: items[nextIndex] }])
     const dur = enterDurationMs(items[nextIndex].transition)
     setTimeout(() => {
-      setStack((s) => s.filter((l) => l.key === nextIndex))
+      setStack((s) => s.filter((l) => l.key === nextKey))
       advancingRef.current = false
     }, dur + 30)
   }
@@ -120,9 +139,9 @@ export default function ShowPlayer({ onExit }: { onExit: () => void }): React.JS
         e.preventDefault()
         setPaused((p) => !p)
       } else if (e.key === 'ArrowRight') {
-        goTo(currentKey + 1)
+        goTo(currentIndex + 1)
       } else if (e.key === 'ArrowLeft') {
-        goTo(currentKey - 1)
+        goTo(currentIndex - 1)
       }
     }
     window.addEventListener('keydown', handleKey)

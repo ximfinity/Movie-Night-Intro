@@ -4,6 +4,7 @@ import type {
   CountdownConfig,
   ImportedMediaFile,
   MediaKind,
+  MediaRef,
   PlaylistItem,
   ProjectData,
   SlideFrame,
@@ -102,13 +103,40 @@ function normalizeProject(project: ProjectData): ProjectData {
   }
 }
 
+/** Every media file a project refers to (library entries plus anything used directly by
+ * an item), deduped by kind+fileName, for checking which are still present on disk. */
+function collectMediaRefs(project: ProjectData): MediaRef[] {
+  const refs: MediaRef[] = []
+  const seen = new Set<string>()
+  function add(kind: MediaKind, fileName: string | null, displayName?: string | null): void {
+    if (!fileName || seen.has(`${kind}:${fileName}`)) return
+    seen.add(`${kind}:${fileName}`)
+    refs.push({ kind, fileName, displayName: displayName || fileName })
+  }
+  project.library.videos.forEach((f) => add('video', f.fileName, f.displayName))
+  project.library.audio.forEach((f) => add('audio', f.fileName, f.displayName))
+  project.library.images.forEach((f) => add('image', f.fileName, f.displayName))
+  for (const item of project.items) {
+    if (item.type === 'video') {
+      add('video', item.fileName, item.displayName)
+    } else {
+      if (item.music) add(item.music.kind, item.music.fileName, item.music.displayName)
+      for (const frame of item.frames) {
+        add('image', frame.backgroundImage, frame.backgroundImageDisplayName)
+      }
+    }
+  }
+  return refs
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [state, setState] = useState<ProjectState>({
     dir: null,
     project: null,
     selectedItemId: null,
     dirty: false,
-    copiedFrame: null
+    copiedFrame: null,
+    missingMedia: []
   })
 
   const startNewProject = useCallback(async () => {
@@ -116,7 +144,14 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     if (!dir) return
     const name = dir.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'Movie Night'
     const project = createEmptyProject(name)
-    setState({ dir, project, selectedItemId: null, dirty: true, copiedFrame: null })
+    setState({
+      dir,
+      project,
+      selectedItemId: null,
+      dirty: true,
+      copiedFrame: null,
+      missingMedia: []
+    })
     await window.api.saveProject(dir, project)
     setState((s) => ({ ...s, dirty: false }))
   }, [])
@@ -124,13 +159,17 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
   const openProject = useCallback(async () => {
     const result = await window.api.openExistingProject()
     if (!result) return
+    const project = normalizeProject(result.project)
     setState({
       dir: result.dir,
-      project: normalizeProject(result.project),
+      project,
       selectedItemId: null,
       dirty: false,
-      copiedFrame: null
+      copiedFrame: null,
+      missingMedia: []
     })
+    const missing = await window.api.checkMediaExists(result.dir, collectMediaRefs(project))
+    if (missing.length > 0) setState((s) => ({ ...s, missingMedia: missing }))
   }, [])
 
   const saveProject = useCallback(async () => {
@@ -209,7 +248,18 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
   }, [])
 
   const closeProject = useCallback(() => {
-    setState({ dir: null, project: null, selectedItemId: null, dirty: false, copiedFrame: null })
+    setState({
+      dir: null,
+      project: null,
+      selectedItemId: null,
+      dirty: false,
+      copiedFrame: null,
+      missingMedia: []
+    })
+  }, [])
+
+  const dismissMissingMedia = useCallback(() => {
+    setState((s) => ({ ...s, missingMedia: [] }))
   }, [])
 
   const updateCountdown = useCallback((patch: Partial<CountdownConfig>) => {
@@ -370,7 +420,8 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       removeFrame,
       moveFrame,
       copyFrame,
-      pasteFrame
+      pasteFrame,
+      dismissMissingMedia
     }),
     [
       state,
@@ -392,7 +443,8 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       removeFrame,
       moveFrame,
       copyFrame,
-      pasteFrame
+      pasteFrame,
+      dismissMissingMedia
     ]
   )
 

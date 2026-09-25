@@ -9,7 +9,8 @@ export default function EditorScreen({
 }: {
   onStartShow: () => void
 }): React.JSX.Element {
-  const { project, dirty, saveProject, closeProject } = useProject()
+  const { project, dirty, saveProject, closeProject, missingMedia, dismissMissingMedia } =
+    useProject()
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -62,6 +63,18 @@ export default function EditorScreen({
           </button>
         </div>
       </header>
+      {missingMedia.length > 0 && (
+        <div className="missing-media-banner">
+          <span>
+            <strong>{missingMedia.length}</strong> file
+            {missingMedia.length === 1 ? '' : 's'} used by this project couldn&apos;t be found on
+            disk: {missingMedia.map((f) => f.displayName).join(', ')}
+          </span>
+          <button className="btn btn-ghost" onClick={dismissMissingMedia}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <div className="editor-body">
         <PlaylistPanel />
         <InspectorPanel />

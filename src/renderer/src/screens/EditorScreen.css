@@ -42,3 +42,20 @@
   display: flex;
   min-height: 0;
 }
+
+.missing-media-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 20px;
+  background: rgba(255, 107, 107, 0.12);
+  border-bottom: 1px solid rgba(255, 107, 107, 0.3);
+  color: var(--text-0);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.missing-media-banner strong {
+  color: var(--danger);
+}

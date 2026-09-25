@@ -31,11 +31,16 @@ transitions and animations.
   over whatever video clip or slide is currently showing rather than taking its own turn
   in the playlist. Counts down either to a **target start time** (recommended — stays
   accurate no matter how many times you stop and restart the show) or a fixed duration
-  from whenever the show is started.
+  from whenever the show is started. In target-time mode, turn on **loop the playlist
+  until showtime** to have the whole playlist automatically start over from the top if it
+  finishes before the target time arrives, instead of ending the show early.
 - **Media library** — bulk-import a batch of video clips or music tracks at once, then
   reuse them: add any library video to the show with one click, or assign a library
   music track (or image) to a slide from a dropdown instead of re-opening a file picker
   each time.
+- **Missing-file warning** — opening a project flags any video, music, or image file it
+  references that can't be found on disk (moved, renamed, or opened on another machine),
+  so you find out before showtime instead of mid-show.
 - **Clean modern transitions** — crossfade, slide, zoom, or hard cut between items.
 - **Fullscreen show mode** — press **Start Show** to go fullscreen. `Esc` exits,
   `Space` pauses, `←`/`→` skip between items — for a hands-off automatic show with a

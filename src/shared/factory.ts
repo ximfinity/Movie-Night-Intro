@@ -20,7 +20,8 @@ export function createDefaultCountdown(): CountdownConfig {
     targetTime: formatTimeOfDay(new Date(Date.now() + 5 * 60_000)),
     holdAtZeroSec: 3,
     style: 'ring',
-    position: 'top-right'
+    position: 'top-right',
+    loopPlaylistUntilShowtime: false
   }
 }
 

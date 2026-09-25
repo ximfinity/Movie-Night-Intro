@@ -3,6 +3,7 @@ import type {
   CountdownConfig,
   ImportedMediaFile,
   MediaKind,
+  MediaRef,
   PlaylistItem,
   ProjectData,
   SlideFrame,
@@ -20,6 +21,9 @@ export interface ProjectState {
   dirty: boolean
   /** In-memory clipboard for reusing a slide frame across slideshow items; never saved. */
   copiedFrame: SlideFrame | null
+  /** Media files the open project refers to that couldn't be found on disk, detected on
+   * open; never saved. Cleared when the banner showing them is dismissed. */
+  missingMedia: MediaRef[]
 }
 
 export interface ProjectContextValue extends ProjectState {
@@ -44,6 +48,7 @@ export interface ProjectContextValue extends ProjectState {
    * clipboard so it can also be pasted into a different slideshow item. */
   copyFrame: (itemId: string, frameId: string) => void
   pasteFrame: (itemId: string) => void
+  dismissMissingMedia: () => void
 }
 
 export const ProjectContext = createContext<ProjectContextValue | null>(null)
