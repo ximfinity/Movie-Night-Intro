@@ -1,0 +1,87 @@
+.home {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 0%, #1c2133 0%, var(--bg-0) 60%);
+  overflow: hidden;
+}
+
+.home-glow {
+  position: absolute;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  top: -320px;
+  background: radial-gradient(circle, rgba(242, 184, 75, 0.18), transparent 70%);
+  animation: drift 12s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from {
+    transform: translateX(-120px);
+  }
+  to {
+    transform: translateX(120px);
+  }
+}
+
+.home-card {
+  position: relative;
+  z-index: 1;
+  max-width: 480px;
+  text-align: center;
+  padding: 48px 40px;
+  border-radius: var(--radius-lg);
+  background: rgba(20, 23, 33, 0.7);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(10px);
+  animation: rise 0.5s ease;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.home-badge {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.home-card h1 {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--accent-strong), #ffe6ad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.home-tagline {
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.home-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.home-actions .btn {
+  padding: 11px 20px;
+}

@@ -1,0 +1,90 @@
+:root {
+  --bg-0: #0a0c12;
+  --bg-1: #12151f;
+  --bg-2: #1a1e2b;
+  --bg-3: #232838;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  --text-0: #f5f6fa;
+  --text-1: rgba(245, 246, 250, 0.72);
+  --text-2: rgba(245, 246, 250, 0.46);
+
+  --accent: #f2b84b;
+  --accent-strong: #ffcf6b;
+  --accent-soft: rgba(242, 184, 75, 0.16);
+  --accent-contrast: #1a1206;
+
+  --video-color: #6aa6ff;
+  --slide-color: #7ee2b8;
+  --countdown-color: #f2b84b;
+
+  --danger: #ff6b6b;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+
+  --shadow-1: 0 2px 10px rgba(0, 0, 0, 0.25);
+  --shadow-2: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+button {
+  font-family: inherit;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--text-0);
+  background: var(--bg-0);
+  line-height: 1.5;
+  font-family:
+    'Segoe UI',
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Helvetica Neue',
+    sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  user-select: none;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-3);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}

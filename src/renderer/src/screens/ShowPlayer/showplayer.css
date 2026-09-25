@@ -1,0 +1,270 @@
+.show-root {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
+  cursor: none;
+}
+
+.stage-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Video */
+
+.video-stage {
+  background: #000;
+}
+
+.video-stage video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Slide themes */
+
+.slide-stage {
+  position: relative;
+  flex-direction: column;
+  text-align: center;
+  padding: 8vh 10vw;
+}
+
+.slide-theme-midnight {
+  background: radial-gradient(ellipse at 50% 30%, #1c2450 0%, #0a0e24 70%);
+  color: #f5f6fa;
+}
+
+.slide-theme-sunset {
+  background: linear-gradient(150deg, #ff8a3d 0%, #ff3d77 45%, #6d28d9 100%);
+  color: #fff8f0;
+}
+
+.slide-theme-popcorn {
+  background: radial-gradient(ellipse at 50% 20%, #8f1420 0%, #3d0509 75%);
+  color: #fff3d6;
+}
+
+.slide-theme-classic {
+  background: #050505;
+  color: #ffffff;
+}
+
+.slide-bg-image-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.slide-bg-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  will-change: transform;
+}
+
+.slide-bg-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+.slide-content {
+  position: relative;
+  z-index: 1;
+  max-width: 80vw;
+}
+
+.slide-title {
+  font-size: clamp(38px, 6vw, 84px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
+}
+
+.slide-theme-midnight .slide-title {
+  background: linear-gradient(135deg, #ffe6ad, #f2b84b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.slide-subtitle {
+  margin-top: 24px;
+  font-size: clamp(18px, 2.2vw, 30px);
+  font-weight: 400;
+  opacity: 0.88;
+  line-height: 1.5;
+}
+
+/* Countdown */
+
+.countdown-stage {
+  flex-direction: column;
+  gap: 28px;
+  background: radial-gradient(ellipse at 50% 35%, #1c2035 0%, #06070c 75%);
+  color: var(--text-0);
+}
+
+.countdown-label {
+  font-size: clamp(20px, 2.6vw, 34px);
+  font-weight: 600;
+  color: var(--text-1);
+  letter-spacing: 0.02em;
+}
+
+.countdown-display {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 340px;
+  height: 340px;
+}
+
+.countdown-digits {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: 96px;
+  color: var(--accent);
+  text-shadow: 0 0 40px rgba(242, 184, 75, 0.35);
+}
+
+.countdown-colon {
+  margin: 0 4px;
+  opacity: 0.6;
+}
+
+.countdown-style-ring .countdown-digits {
+  font-size: 76px;
+}
+
+.countdown-ring {
+  position: absolute;
+  inset: 0;
+  transform: scale(1);
+}
+
+.countdown-ring-track {
+  stroke: rgba(255, 255, 255, 0.12);
+}
+
+.countdown-ring-progress {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s linear;
+  filter: drop-shadow(0 0 10px rgba(242, 184, 75, 0.5));
+}
+
+.countdown-style-flip .countdown-digits {
+  animation: flipIn 0.4s ease;
+}
+
+@keyframes flipIn {
+  from {
+    transform: rotateX(70deg);
+    opacity: 0.3;
+  }
+  to {
+    transform: rotateX(0);
+    opacity: 1;
+  }
+}
+
+.countdown-style-pulse .countdown-digits {
+  animation: pulseBeat 1s ease-in-out infinite;
+}
+
+@keyframes pulseBeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+.countdown-complete {
+  font-size: clamp(40px, 6vw, 90px);
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffe6ad, #f2b84b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: completePop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+  text-align: center;
+  padding: 0 6vw;
+}
+
+@keyframes completePop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* HUD */
+
+.show-hud {
+  position: absolute;
+  bottom: 18px;
+  right: 22px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+.show-paused-badge {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: var(--text-0);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.show-fade-black {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  z-index: 20;
+  animation: fadeToBlack 0.9s ease forwards;
+}
+
+@keyframes fadeToBlack {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

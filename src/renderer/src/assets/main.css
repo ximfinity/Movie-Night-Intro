@@ -1,0 +1,116 @@
+@import './base.css';
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-2);
+  color: var(--text-0);
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.btn:hover {
+  background: var(--bg-3);
+  border-color: var(--border-strong);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+  border-color: transparent;
+  color: var(--accent-contrast);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.06);
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn-ghost:hover {
+  background: var(--bg-2);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+input[type='text'],
+input[type='number'],
+textarea,
+select {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+}
+
+input[type='text']:focus,
+input[type='number']:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+label.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-1);
+  margin-bottom: 14px;
+}
+
+label.field .field-label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-1);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-1);
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
