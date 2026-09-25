@@ -44,7 +44,10 @@ transitions and animations.
 - **Clean modern transitions** — crossfade, slide, zoom, or hard cut between items.
 - **Fullscreen show mode** — press **Start Show** to go fullscreen. `Esc` exits,
   `Space` pauses, `←`/`→` skip between items — for a hands-off automatic show with a
-  manual override if you need it.
+  manual override if you need it. Select any item in the playlist first and a
+  **Start From Selected** button appears next to it, so if you need to stop the show and
+  restart partway through, you can jump straight back to where you left off instead of
+  replaying from the top.
 
 ## Music note
 

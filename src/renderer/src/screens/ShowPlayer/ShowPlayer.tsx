@@ -59,13 +59,24 @@ function StageFor({
   }
 }
 
-export default function ShowPlayer({ onExit }: { onExit: () => void }): React.JSX.Element {
+export default function ShowPlayer({
+  startIndex = 0,
+  onExit
+}: {
+  /** Playlist item to begin on instead of the start — e.g. resuming partway through after
+   * stopping the show early. Clamped to a valid index. */
+  startIndex?: number
+  onExit: () => void
+}): React.JSX.Element {
   const { project, dir } = useProject()
   const items = project!.items
   const music = useBackgroundMusic(dir!)
   const popupVideoRef = useRef<PopupVideoHandle>(null)
 
-  const [stack, setStack] = useState<StackEntry[]>(() => [{ key: 0, item: items[0] }])
+  const initialIndex = Math.min(Math.max(startIndex, 0), items.length - 1)
+  const [stack, setStack] = useState<StackEntry[]>(() => [
+    { key: initialIndex, item: items[initialIndex] }
+  ])
   const [paused, setPaused] = useState(false)
   const [ending, setEnding] = useState(false)
   const advancingRef = useRef(false)

@@ -2,15 +2,23 @@ import { useEffect } from 'react'
 import { useProject } from '../state/useProject'
 import PlaylistPanel from '../components/PlaylistPanel'
 import InspectorPanel from '../components/inspectors/InspectorPanel'
+import { itemTitle } from '../lib/itemMeta'
 import './EditorScreen.css'
 
 export default function EditorScreen({
   onStartShow
 }: {
-  onStartShow: () => void
+  onStartShow: (startIndex?: number) => void
 }): React.JSX.Element {
-  const { project, dirty, saveProject, closeProject, missingMedia, dismissMissingMedia } =
-    useProject()
+  const {
+    project,
+    dirty,
+    saveProject,
+    closeProject,
+    missingMedia,
+    dismissMissingMedia,
+    selectedItemId
+  } = useProject()
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -26,10 +34,12 @@ export default function EditorScreen({
   if (!project) return <></>
 
   const canStart = project.items.length > 0
+  const selectedIndex = project.items.findIndex((it) => it.id === selectedItemId)
+  const selectedItem = selectedIndex === -1 ? null : project.items[selectedIndex]
 
-  async function handleStartShow(): Promise<void> {
+  async function handleStartShow(startIndex?: number): Promise<void> {
     if (dirty) await saveProject()
-    onStartShow()
+    onStartShow(startIndex)
   }
 
   function handleClose(): void {
@@ -53,9 +63,18 @@ export default function EditorScreen({
           <button className="btn" onClick={saveProject} disabled={!dirty}>
             Save
           </button>
+          {selectedItem && (
+            <button
+              className="btn"
+              onClick={() => handleStartShow(selectedIndex)}
+              title={`Go fullscreen and start playing from "${itemTitle(selectedItem)}" instead of the beginning — handy if you need to stop and resume partway through`}
+            >
+              ▶ Start From Selected
+            </button>
+          )}
           <button
             className="btn btn-primary"
-            onClick={handleStartShow}
+            onClick={() => handleStartShow()}
             disabled={!canStart}
             title={canStart ? 'Go fullscreen and play the show' : 'Add at least one item first'}
           >

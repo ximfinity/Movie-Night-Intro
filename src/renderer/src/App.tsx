@@ -10,16 +10,24 @@ type View = 'editor' | 'show'
 function Shell(): React.JSX.Element {
   const { dir, project } = useProject()
   const [view, setView] = useState<View>('editor')
+  const [startIndex, setStartIndex] = useState(0)
 
   if (!dir || !project) {
     return <HomeScreen />
   }
 
   if (view === 'show') {
-    return <ShowPlayer onExit={() => setView('editor')} />
+    return <ShowPlayer startIndex={startIndex} onExit={() => setView('editor')} />
   }
 
-  return <EditorScreen onStartShow={() => setView('show')} />
+  return (
+    <EditorScreen
+      onStartShow={(index) => {
+        setStartIndex(index ?? 0)
+        setView('show')
+      }}
+    />
+  )
 }
 
 function App(): React.JSX.Element {
