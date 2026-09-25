@@ -1,9 +1,15 @@
-import type { MediaKind } from './types'
+import type { MediaKind, MediaLibrary } from './types'
 
-const MEDIA_SUBDIR: Record<MediaKind, string> = {
+const MEDIA_SUBDIR: Record<MediaKind, keyof MediaLibrary> = {
   video: 'videos',
   audio: 'audio',
   image: 'images'
+}
+
+/** The MediaLibrary field a given media kind is stored under (also doubles as the
+ * on-disk media/<subdir> folder name). */
+export function libraryKey(kind: MediaKind): keyof MediaLibrary {
+  return MEDIA_SUBDIR[kind]
 }
 
 export function mediaRelPath(kind: MediaKind, fileName: string): string {

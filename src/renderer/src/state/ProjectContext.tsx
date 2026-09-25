@@ -1,7 +1,25 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import type { PlaylistItem, ProjectData } from '@shared/types'
-import { createEmptyProject } from '@shared/factory'
+import type {
+  CountdownConfig,
+  ImportedMediaFile,
+  MediaKind,
+  PlaylistItem,
+  ProjectData
+} from '@shared/types'
+import { createDefaultCountdown, createEmptyLibrary, createEmptyProject } from '@shared/factory'
+import { libraryKey } from '@shared/paths'
 import { ProjectContext, type ProjectContextValue, type ProjectState } from './context'
+
+/** Backfills fields that may be missing from a project saved by an older version of the
+ * app, and drops playlist item types that no longer exist (e.g. the old inline countdown item). */
+function normalizeProject(project: ProjectData): ProjectData {
+  return {
+    ...project,
+    items: project.items.filter((it) => it.type === 'video' || it.type === 'slide'),
+    countdown: project.countdown ?? createDefaultCountdown(),
+    library: project.library ?? createEmptyLibrary()
+  }
+}
 
 export function ProjectProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [state, setState] = useState<ProjectState>({
@@ -24,7 +42,12 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
   const openProject = useCallback(async () => {
     const result = await window.api.openExistingProject()
     if (!result) return
-    setState({ dir: result.dir, project: result.project, selectedItemId: null, dirty: false })
+    setState({
+      dir: result.dir,
+      project: normalizeProject(result.project),
+      selectedItemId: null,
+      dirty: false
+    })
   }, [])
 
   const saveProject = useCallback(async () => {
@@ -106,6 +129,59 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     setState({ dir: null, project: null, selectedItemId: null, dirty: false })
   }, [])
 
+  const updateCountdown = useCallback((patch: Partial<CountdownConfig>) => {
+    setState((s) => {
+      if (!s.project) return s
+      return {
+        ...s,
+        project: { ...s.project, countdown: { ...s.project.countdown, ...patch } },
+        dirty: true
+      }
+    })
+  }, [])
+
+  const importToLibrary = useCallback(
+    async (kind: MediaKind): Promise<ImportedMediaFile[]> => {
+      if (!state.dir) return []
+      const files = await window.api.importMedia(state.dir, kind)
+      if (files.length === 0) return []
+      const key = libraryKey(kind)
+      setState((s) => {
+        if (!s.project) return s
+        const existingNames = new Set(s.project.library[key].map((f) => f.fileName))
+        const merged = [
+          ...s.project.library[key],
+          ...files.filter((f) => !existingNames.has(f.fileName))
+        ]
+        return {
+          ...s,
+          project: { ...s.project, library: { ...s.project.library, [key]: merged } },
+          dirty: true
+        }
+      })
+      return files
+    },
+    [state.dir]
+  )
+
+  const removeFromLibrary = useCallback((kind: MediaKind, fileName: string) => {
+    const key = libraryKey(kind)
+    setState((s) => {
+      if (!s.project) return s
+      return {
+        ...s,
+        project: {
+          ...s.project,
+          library: {
+            ...s.project.library,
+            [key]: s.project.library[key].filter((f) => f.fileName !== fileName)
+          }
+        },
+        dirty: true
+      }
+    })
+  }, [])
+
   const value = useMemo<ProjectContextValue>(
     () => ({
       ...state,
@@ -118,7 +194,10 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       duplicateItem,
       reorderItems,
       selectItem,
-      closeProject
+      closeProject,
+      updateCountdown,
+      importToLibrary,
+      removeFromLibrary
     }),
     [
       state,
@@ -131,7 +210,10 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       duplicateItem,
       reorderItems,
       selectItem,
-      closeProject
+      closeProject,
+      updateCountdown,
+      importToLibrary,
+      removeFromLibrary
     ]
   )
 

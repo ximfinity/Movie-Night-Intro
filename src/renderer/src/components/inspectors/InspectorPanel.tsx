@@ -1,4 +1,5 @@
 import { useProject } from '../../state/useProject'
+import { COUNTDOWN_SELECTION_ID } from '../../state/context'
 import { itemColorVar, itemIcon, itemTitle } from '../../lib/itemMeta'
 import VideoInspector from './VideoInspector'
 import SlideInspector from './SlideInspector'
@@ -7,7 +8,35 @@ import './inspectors.css'
 
 export default function InspectorPanel(): React.JSX.Element {
   const { project, selectedItemId } = useProject()
-  const item = project?.items.find((it) => it.id === selectedItemId) ?? null
+
+  if (!project) {
+    return (
+      <div className="inspector-panel inspector-empty">
+        <p>Select an item on the left to edit its settings.</p>
+      </div>
+    )
+  }
+
+  if (selectedItemId === COUNTDOWN_SELECTION_ID) {
+    return (
+      <div className="inspector-panel">
+        <div className="inspector-header">
+          <span className="inspector-icon" style={{ background: 'var(--countdown-color)' }}>
+            ⏱️
+          </span>
+          <div>
+            <div className="inspector-title">Countdown Overlay</div>
+            <div className="inspector-type">show-wide setting</div>
+          </div>
+        </div>
+        <div className="inspector-body">
+          <CountdownInspector config={project.countdown} />
+        </div>
+      </div>
+    )
+  }
+
+  const item = project.items.find((it) => it.id === selectedItemId) ?? null
 
   if (!item) {
     return (
@@ -31,7 +60,6 @@ export default function InspectorPanel(): React.JSX.Element {
       <div className="inspector-body">
         {item.type === 'video' && <VideoInspector item={item} />}
         {item.type === 'slide' && <SlideInspector item={item} />}
-        {item.type === 'countdown' && <CountdownInspector item={item} />}
       </div>
     </div>
   )

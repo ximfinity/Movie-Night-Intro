@@ -10,6 +10,8 @@ export type TextAnimation = 'fade-up' | 'typewriter' | 'zoom-in' | 'slide-in'
 
 export type CountdownStyle = 'flip' | 'ring' | 'pulse'
 
+export type OverlayPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center'
+
 export interface SlideMusic {
   fileName: string
   displayName: string
@@ -22,7 +24,7 @@ export interface SlideMusic {
 
 export interface BaseItem {
   id: string
-  type: 'video' | 'slide' | 'countdown'
+  type: 'video' | 'slide'
   /** Transition used when this item enters (transitioning away from the previous item). */
   transition: TransitionStyle
 }
@@ -46,29 +48,42 @@ export interface SlideItem extends BaseItem {
   music: SlideMusic | null
 }
 
-export interface CountdownItem extends BaseItem {
-  type: 'countdown'
+export type PlaylistItem = VideoItem | SlideItem
+
+/** Show-wide countdown, rendered as a persistent overlay on top of whatever is playing
+ * (rather than occupying a slot in the playlist), from the start of the show until it completes. */
+export interface CountdownConfig {
+  enabled: boolean
   label: string
   completeLabel: string
   durationSec: number
   holdAtZeroSec: number
   style: CountdownStyle
-}
-
-export type PlaylistItem = VideoItem | SlideItem | CountdownItem
-
-export interface ProjectData {
-  formatVersion: 1
-  id: string
-  name: string
-  createdAt: string
-  updatedAt: string
-  items: PlaylistItem[]
+  position: OverlayPosition
 }
 
 export interface ImportedMediaFile {
   fileName: string
   displayName: string
+}
+
+/** Media imported ahead of time so it can be reused across multiple items without
+ * re-opening a file picker each time (e.g. the same music track on several slides). */
+export interface MediaLibrary {
+  videos: ImportedMediaFile[]
+  audio: ImportedMediaFile[]
+  images: ImportedMediaFile[]
+}
+
+export interface ProjectData {
+  formatVersion: 2
+  id: string
+  name: string
+  createdAt: string
+  updatedAt: string
+  items: PlaylistItem[]
+  countdown: CountdownConfig
+  library: MediaLibrary
 }
 
 export interface OpenProjectResult {

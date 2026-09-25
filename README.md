@@ -9,16 +9,23 @@ transitions and animations.
 
 ## Features
 
-- **Playlist editor** — mix video clips, text announcement slides, and a countdown timer
-  in any order; drag to reorder.
+- **Playlist editor** — mix video clips and text announcement slides in any order; drag
+  to reorder.
 - **Text slides** — pick a theme (Midnight, Sunset, Popcorn, Classic), an entrance
   animation (fade up, slide in, zoom in, typewriter), an optional background image with
   a slow Ken Burns pan, and an optional background music track with fade in/out and the
   option to keep playing into the next slide.
 - **Video clips** — play local video files at their native length; the show
   auto-advances when each clip ends.
-- **Countdown timer** — a fixed-duration countdown (ring, flip-clock, or pulsing style)
-  that counts down to showtime, then flashes a "let's go" message before continuing.
+- **Countdown overlay** — a fixed-duration countdown (ring, flip-clock, or pulsing
+  style) that stays on screen in a corner of your choice for the whole show, from the
+  moment it starts until it hits zero, then flashes a "let's go" message — it plays over
+  whatever video clip or slide is currently showing rather than taking its own turn in
+  the playlist.
+- **Media library** — bulk-import a batch of video clips or music tracks at once, then
+  reuse them: add any library video to the show with one click, or assign a library
+  music track (or image) to a slide from a dropdown instead of re-opening a file picker
+  each time.
 - **Clean modern transitions** — crossfade, slide, zoom, or hard cut between items.
 - **Fullscreen show mode** — press **Start Show** to go fullscreen. `Esc` exits,
   `Space` pauses, `←`/`→` skip between items — for a hands-off automatic show with a
@@ -68,8 +75,11 @@ src/
 
 1. **New Project** → choose (or create) a folder to hold this project's `project.json`
    and media.
-2. Add a **Countdown Timer** as your first item, then mix in **Video Clips** and **Text
-   Slides** below it — drag to reorder.
-3. Click a playlist item to edit its settings in the right-hand panel (text, theme,
+2. Click **Countdown Overlay** at the top of the sidebar to set its duration, style, and
+   screen position (or turn it off).
+3. Optionally bulk-import a batch of clips/tracks in the **Media Library** section, then
+   add library videos to the show or assign library music/images to slides.
+4. Add **Video Clips** and **Text Slides** to build the playlist — drag to reorder.
+5. Click a playlist item to edit its settings in the right-hand panel (text, theme,
    background image, music, transition, etc.).
-4. **Save** (or `Ctrl+S`), then **Start Show** to go fullscreen and run it automatically.
+6. **Save** (or `Ctrl+S`), then **Start Show** to go fullscreen and run it automatically.

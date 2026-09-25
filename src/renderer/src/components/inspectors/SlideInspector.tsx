@@ -1,4 +1,4 @@
-import type { SlideItem, SlideTheme, TextAnimation } from '@shared/types'
+import type { ImportedMediaFile, SlideItem, SlideTheme, TextAnimation } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
 import { useProject } from '../../state/useProject'
 import TransitionSelect from './TransitionSelect'
@@ -18,30 +18,37 @@ const ANIMATIONS: { value: TextAnimation; label: string }[] = [
 ]
 
 export default function SlideInspector({ item }: { item: SlideItem }): React.JSX.Element {
-  const { dir, updateItem } = useProject()
+  const { dir, project, updateItem, importToLibrary } = useProject()
+  const library = project!.library
 
-  async function handlePickImage(): Promise<void> {
-    const files = await window.api.importMedia(dir!, 'image')
-    if (files.length === 0) return
+  function applyImage(file: ImportedMediaFile): void {
     updateItem(item.id, {
-      backgroundImage: files[0].fileName,
-      backgroundImageDisplayName: files[0].displayName
+      backgroundImage: file.fileName,
+      backgroundImageDisplayName: file.displayName
     })
   }
 
-  async function handlePickMusic(): Promise<void> {
-    const files = await window.api.importMedia(dir!, 'audio')
-    if (files.length === 0) return
+  function applyMusic(file: ImportedMediaFile): void {
     updateItem(item.id, {
       music: {
-        fileName: files[0].fileName,
-        displayName: files[0].displayName,
+        fileName: file.fileName,
+        displayName: file.displayName,
         volume: 0.8,
         fadeInSec: 1.5,
         fadeOutSec: 1.5,
         continueToNext: false
       }
     })
+  }
+
+  async function handleImportImage(): Promise<void> {
+    const files = await importToLibrary('image')
+    if (files.length > 0) applyImage(files[0])
+  }
+
+  async function handleImportMusic(): Promise<void> {
+    const files = await importToLibrary('audio')
+    if (files.length > 0) applyMusic(files[0])
   }
 
   return (
@@ -126,9 +133,29 @@ export default function SlideInspector({ item }: { item: SlideItem }): React.JSX
             </button>
           </div>
         ) : (
-          <button className="btn" onClick={handlePickImage}>
-            + Choose image
-          </button>
+          <div className="picker-row">
+            <button className="btn" onClick={handleImportImage}>
+              + Import new
+            </button>
+            {library.images.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  const f = library.images.find((x) => x.fileName === e.target.value)
+                  if (f) applyImage(f)
+                }}
+              >
+                <option value="" disabled>
+                  From library…
+                </option>
+                {library.images.map((f) => (
+                  <option key={f.fileName} value={f.fileName}>
+                    {f.displayName}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         )}
       </div>
 
@@ -174,9 +201,29 @@ export default function SlideInspector({ item }: { item: SlideItem }): React.JSX
             </label>
           </div>
         ) : (
-          <button className="btn" onClick={handlePickMusic}>
-            + Choose music track
-          </button>
+          <div className="picker-row">
+            <button className="btn" onClick={handleImportMusic}>
+              + Import new
+            </button>
+            {library.audio.length > 0 && (
+              <select
+                value=""
+                onChange={(e) => {
+                  const f = library.audio.find((x) => x.fileName === e.target.value)
+                  if (f) applyMusic(f)
+                }}
+              >
+                <option value="" disabled>
+                  From library…
+                </option>
+                {library.audio.map((f) => (
+                  <option key={f.fileName} value={f.fileName}>
+                    {f.displayName}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         )}
       </div>
     </div>

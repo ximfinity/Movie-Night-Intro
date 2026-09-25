@@ -6,8 +6,6 @@ export function itemIcon(type: PlaylistItem['type']): string {
       return '🎬'
     case 'slide':
       return '📝'
-    case 'countdown':
-      return '⏱️'
   }
 }
 
@@ -17,8 +15,6 @@ export function itemColorVar(type: PlaylistItem['type']): string {
       return 'var(--video-color)'
     case 'slide':
       return 'var(--slide-color)'
-    case 'countdown':
-      return 'var(--countdown-color)'
   }
 }
 
@@ -28,8 +24,6 @@ export function itemTitle(item: PlaylistItem): string {
       return item.displayName || 'Video clip'
     case 'slide':
       return item.title || 'Untitled slide'
-    case 'countdown':
-      return item.label || 'Countdown'
   }
 }
 
@@ -43,8 +37,6 @@ export function itemSubtitle(item: PlaylistItem): string {
       if (item.backgroundImage) bits.push('with image')
       return bits.join(' · ')
     }
-    case 'countdown':
-      return `${formatDuration(item.durationSec)} countdown`
   }
 }
 

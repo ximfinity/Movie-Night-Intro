@@ -8,20 +8,25 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useProject } from '../state/useProject'
-import { createCountdownItem, createSlideItem, createVideoItem } from '@shared/factory'
+import { COUNTDOWN_SELECTION_ID } from '../state/context'
+import { createSlideItem, createVideoItem } from '@shared/factory'
+import { formatDuration } from '../lib/itemMeta'
 import SortableItemCard from './SortableItemCard'
+import MediaLibraryPanel from './MediaLibraryPanel'
 import './PlaylistPanel.css'
 
 export default function PlaylistPanel(): React.JSX.Element {
-  const { project, dir, addItem, reorderItems } = useProject()
+  const { project, dir, addItem, reorderItems, selectedItemId, selectItem, importToLibrary } =
+    useProject()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
 
   if (!project || !dir) return <></>
 
   const items = project.items
+  const countdown = project.countdown
 
   async function handleAddVideo(): Promise<void> {
-    const files = await window.api.importMedia(dir!, 'video')
+    const files = await importToLibrary('video')
     for (const f of files) {
       addItem(createVideoItem(f.fileName, f.displayName))
     }
@@ -29,10 +34,6 @@ export default function PlaylistPanel(): React.JSX.Element {
 
   function handleAddSlide(): void {
     addItem(createSlideItem())
-  }
-
-  function handleAddCountdown(): void {
-    addItem(createCountdownItem())
   }
 
   function handleDragEnd(event: DragEndEvent): void {
@@ -46,6 +47,23 @@ export default function PlaylistPanel(): React.JSX.Element {
 
   return (
     <div className="playlist-panel">
+      <button
+        className={`countdown-card ${selectedItemId === COUNTDOWN_SELECTION_ID ? 'countdown-card-selected' : ''}`}
+        onClick={() => selectItem(COUNTDOWN_SELECTION_ID)}
+      >
+        <span className="countdown-card-icon">⏱️</span>
+        <div className="countdown-card-text">
+          <div className="countdown-card-title">Countdown Overlay</div>
+          <div className="countdown-card-subtitle">
+            {countdown.enabled
+              ? `On · ${formatDuration(countdown.durationSec)} · ${countdown.position.replace('-', ' ')}`
+              : 'Off'}
+          </div>
+        </div>
+      </button>
+
+      <MediaLibraryPanel />
+
       <div className="playlist-add-row">
         <button className="btn add-btn add-video" onClick={handleAddVideo}>
           🎬 Video Clip
@@ -53,17 +71,14 @@ export default function PlaylistPanel(): React.JSX.Element {
         <button className="btn add-btn add-slide" onClick={handleAddSlide}>
           📝 Text Slide
         </button>
-        <button className="btn add-btn add-countdown" onClick={handleAddCountdown}>
-          ⏱️ Countdown
-        </button>
       </div>
 
       {items.length === 0 ? (
         <div className="playlist-empty">
           <p>Your playlist is empty.</p>
           <p className="playlist-empty-hint">
-            Add a countdown timer to open the show, then mix in video clips and announcement slides
-            below.
+            Add video clips and announcement slides below — the countdown overlay above plays on top
+            automatically, so you don&apos;t need to add it here.
           </p>
         </div>
       ) : (

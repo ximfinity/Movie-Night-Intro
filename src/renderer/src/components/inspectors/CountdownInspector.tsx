@@ -1,7 +1,6 @@
-import type { CountdownItem, CountdownStyle } from '@shared/types'
+import type { CountdownConfig, CountdownStyle, OverlayPosition } from '@shared/types'
 import { useProject } from '../../state/useProject'
 import { formatDuration } from '../../lib/itemMeta'
-import TransitionSelect from './TransitionSelect'
 
 const STYLES: { value: CountdownStyle; label: string }[] = [
   { value: 'ring', label: 'Progress ring' },
@@ -9,20 +8,47 @@ const STYLES: { value: CountdownStyle; label: string }[] = [
   { value: 'pulse', label: 'Pulsing numbers' }
 ]
 
-export default function CountdownInspector({ item }: { item: CountdownItem }): React.JSX.Element {
-  const { updateItem } = useProject()
+const POSITIONS: { value: OverlayPosition; label: string }[] = [
+  { value: 'top-left', label: 'Top left' },
+  { value: 'top-right', label: 'Top right' },
+  { value: 'bottom-left', label: 'Bottom left' },
+  { value: 'bottom-right', label: 'Bottom right' },
+  { value: 'center', label: 'Top center' }
+]
 
-  const minutes = Math.floor(item.durationSec / 60)
-  const seconds = item.durationSec % 60
+export default function CountdownInspector({
+  config
+}: {
+  config: CountdownConfig
+}): React.JSX.Element {
+  const { updateCountdown } = useProject()
+
+  const minutes = Math.floor(config.durationSec / 60)
+  const seconds = config.durationSec % 60
 
   return (
     <div>
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={config.enabled}
+          onChange={(e) => updateCountdown({ enabled: e.target.checked })}
+        />
+        Show the countdown overlay during the show
+      </label>
+
+      <p className="inspector-hint">
+        Unlike video clips and slides, the countdown isn&apos;t a step in the playlist — it&apos;s a
+        small overlay that stays on screen over everything else, from the moment the show starts
+        until it reaches zero.
+      </p>
+
       <label className="field">
         <span className="field-label">Label (shown above the timer)</span>
         <input
           type="text"
-          value={item.label}
-          onChange={(e) => updateItem(item.id, { label: e.target.value })}
+          value={config.label}
+          onChange={(e) => updateCountdown({ label: e.target.value })}
         />
       </label>
 
@@ -35,9 +61,7 @@ export default function CountdownInspector({ item }: { item: CountdownItem }): R
             max={180}
             value={minutes}
             onChange={(e) =>
-              updateItem(item.id, {
-                durationSec: Number(e.target.value) * 60 + seconds
-              })
+              updateCountdown({ durationSec: Number(e.target.value) * 60 + seconds })
             }
           />
         </label>
@@ -49,20 +73,18 @@ export default function CountdownInspector({ item }: { item: CountdownItem }): R
             max={59}
             value={seconds}
             onChange={(e) =>
-              updateItem(item.id, {
-                durationSec: minutes * 60 + Number(e.target.value)
-              })
+              updateCountdown({ durationSec: minutes * 60 + Number(e.target.value) })
             }
           />
         </label>
       </div>
-      <p className="inspector-hint">Total: {formatDuration(item.durationSec)}</p>
+      <p className="inspector-hint">Total: {formatDuration(config.durationSec)}</p>
 
       <label className="field">
         <span className="field-label">Style</span>
         <select
-          value={item.style}
-          onChange={(e) => updateItem(item.id, { style: e.target.value as CountdownStyle })}
+          value={config.style}
+          onChange={(e) => updateCountdown({ style: e.target.value as CountdownStyle })}
         >
           {STYLES.map((s) => (
             <option key={s.value} value={s.value}>
@@ -73,37 +95,41 @@ export default function CountdownInspector({ item }: { item: CountdownItem }): R
       </label>
 
       <label className="field">
+        <span className="field-label">Screen position</span>
+        <select
+          value={config.position}
+          onChange={(e) => updateCountdown({ position: e.target.value as OverlayPosition })}
+        >
+          {POSITIONS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="field">
         <span className="field-label">Message when it hits zero</span>
         <input
           type="text"
-          value={item.completeLabel}
-          onChange={(e) => updateItem(item.id, { completeLabel: e.target.value })}
+          value={config.completeLabel}
+          onChange={(e) => updateCountdown({ completeLabel: e.target.value })}
         />
       </label>
 
       <label className="field">
         <span className="field-label">
-          Hold that message for <span>{item.holdAtZeroSec}s</span>
+          Hold that message for <span>{config.holdAtZeroSec}s</span>
         </span>
         <input
           type="range"
           min={0}
           max={10}
           step={1}
-          value={item.holdAtZeroSec}
-          onChange={(e) => updateItem(item.id, { holdAtZeroSec: Number(e.target.value) })}
+          value={config.holdAtZeroSec}
+          onChange={(e) => updateCountdown({ holdAtZeroSec: Number(e.target.value) })}
         />
       </label>
-
-      <TransitionSelect
-        value={item.transition}
-        onChange={(transition) => updateItem(item.id, { transition })}
-      />
-
-      <p className="inspector-hint">
-        On show night, this screen starts counting down the moment the show reaches it — perfect as
-        the very first item in your playlist.
-      </p>
     </div>
   )
 }

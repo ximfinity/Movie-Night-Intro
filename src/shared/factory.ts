@@ -1,15 +1,33 @@
 import { v4 as uuid } from 'uuid'
-import type { CountdownItem, ProjectData, SlideItem, VideoItem } from './types'
+import type { CountdownConfig, MediaLibrary, ProjectData, SlideItem, VideoItem } from './types'
+
+export function createDefaultCountdown(): CountdownConfig {
+  return {
+    enabled: true,
+    label: 'The show starts in',
+    completeLabel: 'Enjoy the show!',
+    durationSec: 300,
+    holdAtZeroSec: 3,
+    style: 'ring',
+    position: 'top-right'
+  }
+}
+
+export function createEmptyLibrary(): MediaLibrary {
+  return { videos: [], audio: [], images: [] }
+}
 
 export function createEmptyProject(name: string): ProjectData {
   const now = new Date().toISOString()
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     id: uuid(),
     name,
     createdAt: now,
     updatedAt: now,
-    items: []
+    items: [],
+    countdown: createDefaultCountdown(),
+    library: createEmptyLibrary()
   }
 }
 
@@ -37,18 +55,5 @@ export function createSlideItem(): SlideItem {
     textAnimation: 'fade-up',
     durationSec: 6,
     music: null
-  }
-}
-
-export function createCountdownItem(): CountdownItem {
-  return {
-    id: uuid(),
-    type: 'countdown',
-    transition: 'crossfade',
-    label: 'The show starts in',
-    completeLabel: 'Enjoy the show!',
-    durationSec: 300,
-    holdAtZeroSec: 3,
-    style: 'ring'
   }
 }

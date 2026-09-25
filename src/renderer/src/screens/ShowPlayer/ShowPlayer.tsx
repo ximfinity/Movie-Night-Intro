@@ -6,7 +6,7 @@ import TransitionLayer from './TransitionLayer'
 import { enterDurationMs } from './transitions'
 import VideoStage from './VideoStage'
 import SlideStage from './SlideStage'
-import CountdownStage from './CountdownStage'
+import CountdownOverlay from './CountdownOverlay'
 import ShowHud from './ShowHud'
 import './showplayer.css'
 
@@ -33,8 +33,6 @@ function StageFor({
       return <VideoStage item={item} dir={dir} paused={paused} onDone={onDone} />
     case 'slide':
       return <SlideStage item={item} dir={dir} paused={paused} music={music} onDone={onDone} />
-    case 'countdown':
-      return <CountdownStage item={item} paused={paused} onDone={onDone} />
   }
 }
 
@@ -127,6 +125,7 @@ export default function ShowPlayer({ onExit }: { onExit: () => void }): React.JS
           </TransitionLayer>
         )
       })}
+      <CountdownOverlay config={project!.countdown} paused={paused} />
       {ending && <div className="show-fade-black" />}
       <ShowHud paused={paused} />
     </div>

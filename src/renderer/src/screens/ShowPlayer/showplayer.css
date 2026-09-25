@@ -112,70 +112,113 @@
   line-height: 1.5;
 }
 
-/* Countdown */
+/* Countdown overlay — persistent widget layered on top of whatever is playing */
 
-.countdown-stage {
+.countdown-overlay {
+  position: absolute;
+  z-index: 15;
+  display: flex;
   flex-direction: column;
-  gap: 28px;
-  background: radial-gradient(ellipse at 50% 35%, #1c2035 0%, #06070c 75%);
-  color: var(--text-0);
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  background: rgba(8, 10, 16, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-2);
+  animation: overlayIn 0.5s ease;
+  pointer-events: none;
 }
 
-.countdown-label {
-  font-size: clamp(20px, 2.6vw, 34px);
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.countdown-overlay-top-left {
+  top: 28px;
+  left: 28px;
+}
+.countdown-overlay-top-right {
+  top: 28px;
+  right: 28px;
+}
+.countdown-overlay-bottom-left {
+  bottom: 28px;
+  left: 28px;
+}
+.countdown-overlay-bottom-right {
+  bottom: 28px;
+  right: 28px;
+}
+.countdown-overlay-center {
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.countdown-overlay-label {
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-1);
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
-.countdown-display {
+.countdown-overlay-display {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 340px;
-  height: 340px;
+  width: 112px;
+  height: 112px;
 }
 
-.countdown-digits {
+.countdown-overlay-digits {
   position: relative;
   z-index: 1;
   display: flex;
   align-items: baseline;
   font-variant-numeric: tabular-nums;
   font-weight: 800;
-  font-size: 96px;
+  font-size: 26px;
   color: var(--accent);
-  text-shadow: 0 0 40px rgba(242, 184, 75, 0.35);
+  text-shadow: 0 0 20px rgba(242, 184, 75, 0.35);
 }
 
-.countdown-colon {
-  margin: 0 4px;
+.countdown-overlay-colon {
+  margin: 0 2px;
   opacity: 0.6;
 }
 
-.countdown-style-ring .countdown-digits {
-  font-size: 76px;
+.countdown-style-ring .countdown-overlay-digits {
+  font-size: 22px;
 }
 
-.countdown-ring {
+.countdown-overlay-ring {
   position: absolute;
   inset: 0;
-  transform: scale(1);
 }
 
-.countdown-ring-track {
+.countdown-overlay-ring-track {
   stroke: rgba(255, 255, 255, 0.12);
 }
 
-.countdown-ring-progress {
+.countdown-overlay-ring-progress {
   stroke: var(--accent);
   stroke-linecap: round;
   transition: stroke-dashoffset 0.1s linear;
-  filter: drop-shadow(0 0 10px rgba(242, 184, 75, 0.5));
+  filter: drop-shadow(0 0 6px rgba(242, 184, 75, 0.5));
 }
 
-.countdown-style-flip .countdown-digits {
+.countdown-style-flip .countdown-overlay-digits {
   animation: flipIn 0.4s ease;
 }
 
@@ -190,7 +233,7 @@
   }
 }
 
-.countdown-style-pulse .countdown-digits {
+.countdown-style-pulse .countdown-overlay-digits {
   animation: pulseBeat 1s ease-in-out infinite;
 }
 
@@ -200,12 +243,12 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.06);
+    transform: scale(1.08);
   }
 }
 
-.countdown-complete {
-  font-size: clamp(40px, 6vw, 90px);
+.countdown-overlay-complete {
+  font-size: 18px;
   font-weight: 800;
   background: linear-gradient(135deg, #ffe6ad, #f2b84b);
   -webkit-background-clip: text;
@@ -213,7 +256,7 @@
   -webkit-text-fill-color: transparent;
   animation: completePop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
   text-align: center;
-  padding: 0 6vw;
+  white-space: nowrap;
 }
 
 @keyframes completePop {
