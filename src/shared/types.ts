@@ -27,6 +27,9 @@ export interface SlideMusic {
   fadeOutSec: number
   /** Only meaningful when kind is 'video'. */
   position: OverlayPosition
+  /** Only meaningful when kind is 'video': size multiplier over the base 260x170 pop-up
+   * box (e.g. 3 = 780x510). */
+  sizeScale: number
   /** Only meaningful when kind is 'video': keep rotating the slideshow's slides in a loop
    * for as long as the video plays, advancing to the next playlist item only when the
    * video itself ends, instead of after one pass through the slides. */

@@ -3,6 +3,10 @@ import gsap from 'gsap'
 import type { OverlayPosition } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
 
+/** Base size (px) the pop-up video's sizeScale multiplies. */
+export const POPUP_VIDEO_BASE_WIDTH = 260
+export const POPUP_VIDEO_BASE_HEIGHT = 170
+
 export interface PopupVideoHandle {
   play: (
     fileName: string,
@@ -10,6 +14,7 @@ export interface PopupVideoHandle {
       volume: number
       fadeInSec: number
       position: OverlayPosition
+      sizeScale: number
       /** Called once when this clip finishes playing on its own (not on a manual stop). */
       onEnded?: () => void
     }
@@ -35,6 +40,7 @@ export default function PopupVideoOverlay({
   const onEndedRef = useRef<(() => void) | undefined>(undefined)
   const [visible, setVisible] = useState(false)
   const [position, setPosition] = useState<OverlayPosition>('bottom-left')
+  const [sizeScale, setSizeScale] = useState(3)
 
   useImperativeHandle(
     ref,
@@ -43,6 +49,7 @@ export default function PopupVideoOverlay({
         const el = videoRef.current
         if (!el) return
         setPosition(opts.position)
+        setSizeScale(opts.sizeScale)
         onEndedRef.current = opts.onEnded
         if (currentFileRef.current === fileName && !el.paused) {
           gsap.to(el, { volume: opts.volume, duration: 0.4, overwrite: true })
@@ -102,7 +109,13 @@ export default function PopupVideoOverlay({
   }, [paused, visible])
 
   return (
-    <div className={`popup-video popup-video-${position} ${visible ? '' : 'popup-video-hidden'}`}>
+    <div
+      className={`popup-video popup-video-${position} ${visible ? '' : 'popup-video-hidden'}`}
+      style={{
+        width: POPUP_VIDEO_BASE_WIDTH * sizeScale,
+        height: POPUP_VIDEO_BASE_HEIGHT * sizeScale
+      }}
+    >
       <video ref={videoRef} onEnded={() => onEndedRef.current?.()} />
     </div>
   )

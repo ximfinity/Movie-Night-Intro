@@ -56,6 +56,7 @@ export default function SlideshowStage({
           volume: m.volume,
           fadeInSec: m.fadeInSec,
           position: m.position,
+          sizeScale: m.sizeScale,
           onEnded: m.loopSlidesUntilEnd ? () => onDoneRef.current() : undefined
         })
       } else {

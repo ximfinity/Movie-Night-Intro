@@ -54,6 +54,7 @@ function normalizeSlideMusic(raw: unknown): SlideMusic | null {
     fadeInSec: (r.fadeInSec as number) ?? 1.5,
     fadeOutSec: (r.fadeOutSec as number) ?? 1.5,
     position: (r.position as SlideMusic['position']) ?? 'bottom-left',
+    sizeScale: (r.sizeScale as number) ?? 3,
     loopSlidesUntilEnd: (r.loopSlidesUntilEnd as boolean) ?? false
   }
 }

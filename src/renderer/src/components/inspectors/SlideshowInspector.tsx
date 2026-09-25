@@ -41,6 +41,7 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
         fadeInSec: 1.5,
         fadeOutSec: 1.5,
         position: 'bottom-left',
+        sizeScale: 3,
         loopSlidesUntilEnd: false
       }
     })
@@ -144,6 +145,24 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
                       </option>
                     ))}
                   </select>
+                </label>
+
+                <label className="field">
+                  <span className="field-label">
+                    Size <span>{Math.round(item.music.sizeScale * 100)}%</span>
+                  </span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={6}
+                    step={0.25}
+                    value={item.music.sizeScale}
+                    onChange={(e) =>
+                      updateItem(item.id, {
+                        music: { ...item.music!, sizeScale: Number(e.target.value) }
+                      })
+                    }
+                  />
                 </label>
 
                 <label className="checkbox-row">

@@ -39,14 +39,15 @@
 .popup-video {
   position: absolute;
   z-index: 14;
-  width: 780px;
-  height: 510px;
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-2);
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: #000;
   animation: overlayIn 0.5s ease;
+  transition:
+    width 0.2s ease,
+    height 0.2s ease;
 }
 
 .popup-video-hidden {
