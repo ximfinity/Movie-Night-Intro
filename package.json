@@ -1,6 +1,6 @@
 {
   "name": "movie-night-intro",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Build an animated movie-night playlist of video clips, music, and text announcement slides, with a countdown timer overlay.",
   "main": "./out/main/index.js",
   "author": "Movie Night Intro",
