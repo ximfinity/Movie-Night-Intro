@@ -8,6 +8,8 @@ import { enterDurationMs } from './transitions'
 import SlideFrameView from './SlideFrameView'
 
 interface FrameStackEntry {
+  /** An ever-incrementing step counter (not a frame index) so slides can loop
+   * indefinitely — the frame shown is `frames[key % frames.length]`. */
   key: number
   frame: SlideFrame
 }
@@ -15,7 +17,10 @@ interface FrameStackEntry {
 /** Rotates through a slideshow item's frames (text and/or image), reusing the same
  * TransitionLayer crossfade/slide/zoom mechanics the show player uses between playlist
  * items. The group's single music track spans the whole rotation, started once on mount
- * and faded out once on unmount, independent of which frame is showing. */
+ * and faded out once on unmount, independent of which frame is showing. When the music is
+ * a pop-up video with "loop until it ends" enabled, the slides keep rotating in a loop and
+ * the item only finishes when the video itself ends, rather than after one pass through
+ * the frames. */
 export default function SlideshowStage({
   item,
   dir,
@@ -32,8 +37,14 @@ export default function SlideshowStage({
   onDone: () => void
 }): React.JSX.Element {
   const frames = item.frames
+  const loopUntilVideoEnds = item.music?.kind === 'video' && item.music.loopSlidesUntilEnd
   const [stack, setStack] = useState<FrameStackEntry[]>(() => [{ key: 0, frame: frames[0] }])
   const advancingRef = useRef(false)
+
+  const onDoneRef = useRef(onDone)
+  useEffect(() => {
+    onDoneRef.current = onDone
+  })
 
   useEffect(() => {
     const m = item.music
@@ -44,7 +55,8 @@ export default function SlideshowStage({
         popupVideo?.play(m.fileName, {
           volume: m.volume,
           fadeInSec: m.fadeInSec,
-          position: m.position
+          position: m.position,
+          onEnded: m.loopSlidesUntilEnd ? () => onDoneRef.current() : undefined
         })
       } else {
         popupVideo?.stopImmediately()
@@ -64,17 +76,18 @@ export default function SlideshowStage({
 
   function advanceFrame(fromKey: number): void {
     if (advancingRef.current || fromKey !== currentKey) return
-    if (fromKey + 1 >= frames.length) {
+    const nextStep = fromKey + 1
+    if (!loopUntilVideoEnds && nextStep >= frames.length) {
       advancingRef.current = true
       onDone()
       return
     }
     advancingRef.current = true
-    const nextIndex = fromKey + 1
-    setStack((s) => [...s, { key: nextIndex, frame: frames[nextIndex] }])
+    const nextFrame = frames[nextStep % frames.length]
+    setStack((s) => [...s, { key: nextStep, frame: nextFrame }])
     const dur = enterDurationMs(item.transition)
     setTimeout(() => {
-      setStack((s) => s.filter((l) => l.key === nextIndex))
+      setStack((s) => s.filter((l) => l.key === nextStep))
       advancingRef.current = false
     }, dur + 30)
   }

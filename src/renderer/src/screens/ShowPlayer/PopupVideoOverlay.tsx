@@ -6,7 +6,13 @@ import { mediaFileUrl } from '@shared/paths'
 export interface PopupVideoHandle {
   play: (
     fileName: string,
-    opts: { volume: number; fadeInSec: number; position: OverlayPosition }
+    opts: {
+      volume: number
+      fadeInSec: number
+      position: OverlayPosition
+      /** Called once when this clip finishes playing on its own (not on a manual stop). */
+      onEnded?: () => void
+    }
   ) => void
   fadeOutAndStop: (fadeOutSec: number) => void
   stopImmediately: () => void
@@ -26,6 +32,7 @@ export default function PopupVideoOverlay({
 }): React.JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null)
   const currentFileRef = useRef<string | null>(null)
+  const onEndedRef = useRef<(() => void) | undefined>(undefined)
   const [visible, setVisible] = useState(false)
   const [position, setPosition] = useState<OverlayPosition>('bottom-left')
 
@@ -36,6 +43,7 @@ export default function PopupVideoOverlay({
         const el = videoRef.current
         if (!el) return
         setPosition(opts.position)
+        onEndedRef.current = opts.onEnded
         if (currentFileRef.current === fileName && !el.paused) {
           gsap.to(el, { volume: opts.volume, duration: 0.4, overwrite: true })
           return
@@ -80,6 +88,7 @@ export default function PopupVideoOverlay({
         }
         setVisible(false)
         currentFileRef.current = null
+        onEndedRef.current = undefined
       }
     }),
     [dir]
@@ -94,7 +103,7 @@ export default function PopupVideoOverlay({
 
   return (
     <div className={`popup-video popup-video-${position} ${visible ? '' : 'popup-video-hidden'}`}>
-      <video ref={videoRef} />
+      <video ref={videoRef} onEnded={() => onEndedRef.current?.()} />
     </div>
   )
 }

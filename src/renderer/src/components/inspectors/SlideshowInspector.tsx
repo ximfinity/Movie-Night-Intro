@@ -4,19 +4,12 @@ import type {
   SlideFrame,
   SlideMusicKind,
   SlideshowItem,
-  SlideTheme,
   TextAnimation
 } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
+import { RANDOM_THEME, SLIDE_THEMES } from '@shared/slideThemes'
 import { useProject } from '../../state/useProject'
 import TransitionSelect from './TransitionSelect'
-
-const THEMES: { value: SlideTheme; label: string }[] = [
-  { value: 'midnight', label: 'Midnight (navy & gold)' },
-  { value: 'sunset', label: 'Sunset (orange & pink)' },
-  { value: 'popcorn', label: 'Popcorn (red & cream)' },
-  { value: 'classic', label: 'Classic (black & white)' }
-]
 
 const ANIMATIONS: { value: TextAnimation; label: string }[] = [
   { value: 'fade-up', label: 'Fade up' },
@@ -47,7 +40,8 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
         volume: 0.8,
         fadeInSec: 1.5,
         fadeOutSec: 1.5,
-        position: 'bottom-left'
+        position: 'bottom-left',
+        loopSlidesUntilEnd: false
       }
     })
   }
@@ -133,23 +127,44 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
             </label>
 
             {item.music.kind === 'video' && (
-              <label className="field">
-                <span className="field-label">Corner of the screen</span>
-                <select
-                  value={item.music.position}
-                  onChange={(e) =>
-                    updateItem(item.id, {
-                      music: { ...item.music!, position: e.target.value as OverlayPosition }
-                    })
-                  }
-                >
-                  {POSITIONS.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label className="field">
+                  <span className="field-label">Corner of the screen</span>
+                  <select
+                    value={item.music.position}
+                    onChange={(e) =>
+                      updateItem(item.id, {
+                        music: { ...item.music!, position: e.target.value as OverlayPosition }
+                      })
+                    }
+                  >
+                    {POSITIONS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={item.music.loopSlidesUntilEnd}
+                    onChange={(e) =>
+                      updateItem(item.id, {
+                        music: { ...item.music!, loopSlidesUntilEnd: e.target.checked }
+                      })
+                    }
+                  />
+                  Repeat the slides in a loop until the video ends
+                </label>
+                {item.music.loopSlidesUntilEnd && (
+                  <p className="inspector-hint">
+                    The slides above keep rotating for as long as the video plays, however long that
+                    is — the group moves on to the next playlist item only once the video finishes.
+                  </p>
+                )}
+              </>
             )}
           </div>
         ) : (
@@ -327,12 +342,10 @@ function FrameEditor({
           </div>
           <label className="field">
             <span className="field-label">Theme</span>
-            <select
-              value={frame.theme}
-              onChange={(e) => patch({ theme: e.target.value as SlideTheme })}
-            >
-              {THEMES.map((t) => (
-                <option key={t.value} value={t.value}>
+            <select value={frame.theme} onChange={(e) => patch({ theme: e.target.value })}>
+              <option value={RANDOM_THEME}>🎲 Random each time</option>
+              {SLIDE_THEMES.map((t) => (
+                <option key={t.id} value={t.id}>
                   {t.label}
                 </option>
               ))}

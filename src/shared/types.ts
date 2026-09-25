@@ -4,7 +4,9 @@ export type MediaKind = 'video' | 'audio' | 'image'
 
 export type TransitionStyle = 'crossfade' | 'slide-left' | 'slide-up' | 'zoom' | 'none'
 
-export type SlideTheme = 'midnight' | 'sunset' | 'popcorn' | 'classic'
+/** A theme id from shared/slideThemes.ts, or the 'random' sentinel meaning "pick one of
+ * the 20 palette themes at random each time this frame is shown". */
+export type SlideTheme = string
 
 export type TextAnimation = 'fade-up' | 'typewriter' | 'zoom-in' | 'slide-in'
 
@@ -25,6 +27,10 @@ export interface SlideMusic {
   fadeOutSec: number
   /** Only meaningful when kind is 'video'. */
   position: OverlayPosition
+  /** Only meaningful when kind is 'video': keep rotating the slideshow's slides in a loop
+   * for as long as the video plays, advancing to the next playlist item only when the
+   * video itself ends, instead of after one pass through the slides. */
+  loopSlidesUntilEnd: boolean
 }
 
 export type SlideFrameContent = 'text' | 'image'

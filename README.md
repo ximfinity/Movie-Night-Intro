@@ -14,12 +14,14 @@ transitions and animations.
   automatically: each slide is either a **text slide** (fixed title, a theme, an entrance
   animation, and an optional background image or GIF) or a full-bleed **image/GIF
   slide**. A text slide's body text can hold several variations — one is picked at
-  random each time the slide is shown, while the title stays fixed. One **music or
+  random each time the slide is shown, while the title stays fixed. Pick from **20 color
+  schemes** per slide, or set a slide's theme to **🎲 Random each time**. One **music or
   pop-up video** selector covers the whole rotating group: an audio track plays quietly
-  underneath, or a video plays with its picture too, in a small corner box (like a
-  pop-up video) while the slides rotate. Use the ⧉ button on any slide to duplicate it in
-  place and copy it for reuse — a **+ Paste** button then appears in any other
-  slideshow's slide list.
+  underneath, or a video plays with its picture too, in a large corner box (like a
+  pop-up video) while the slides rotate — optionally set to **repeat the slides in a
+  loop until the video ends**, however long that is. Use the ⧉ button on any slide to
+  duplicate it in place and copy it for reuse — a **+ Paste** button then appears in any
+  other slideshow's slide list.
 - **Video clips** — play local video files at their native length; the show
   auto-advances when each clip ends. Starting a video immediately cuts any playing
   background music or pop-up video so they never talk over each other.

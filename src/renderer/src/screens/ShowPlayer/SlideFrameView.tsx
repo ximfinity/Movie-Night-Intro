@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import type { SlideFrame } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
+import { RANDOM_THEME, findSlideTheme, pickRandomSlideTheme } from '@shared/slideThemes'
 import { useCountdownTimer } from '../../hooks/useCountdownTimer'
 
 function pickSubtitle(options: string[]): string {
@@ -29,6 +30,9 @@ export default function SlideFrameView({
   // Picked once per mount (i.e. fresh each time this frame is actually shown — including
   // on a restart or manual re-visit — but stable for as long as it stays on screen).
   const [subtitle] = useState(() => pickSubtitle(frame.subtitleOptions))
+  const [theme] = useState(() =>
+    frame.theme === RANDOM_THEME ? pickRandomSlideTheme() : findSlideTheme(frame.theme)
+  )
 
   const bgImageUrl = frame.backgroundImage
     ? mediaFileUrl(dir, 'image', frame.backgroundImage)
@@ -116,7 +120,10 @@ export default function SlideFrameView({
   }
 
   return (
-    <div className={`stage slide-stage slide-theme-${frame.theme}`}>
+    <div
+      className="stage slide-stage"
+      style={{ background: theme.background, color: theme.textColor }}
+    >
       {bgImageUrl && (
         <div className="slide-bg-image-wrap">
           <div
@@ -128,7 +135,16 @@ export default function SlideFrameView({
         </div>
       )}
       <div className="slide-content">
-        <h1 ref={titleRef} className="slide-title">
+        <h1
+          ref={titleRef}
+          className="slide-title"
+          style={{
+            backgroundImage: `linear-gradient(135deg, ${theme.titleFrom}, ${theme.titleTo})`,
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}
+        >
           {frame.title}
         </h1>
         {subtitle && (
