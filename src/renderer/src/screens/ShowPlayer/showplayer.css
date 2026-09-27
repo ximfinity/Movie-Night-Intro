@@ -11,6 +11,18 @@
 .stage-layer {
   position: absolute;
   inset: 0;
+  container-type: size;
+}
+
+/* Editor live preview: the same slide markup in a 16:9 box. Slide text is sized in
+   container units (cqw/cqh), so it scales exactly with whichever box it's in. */
+.slide-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  container-type: size;
+  background: #000;
 }
 
 .stage {
@@ -84,11 +96,13 @@
 
 /* Slide themes */
 
+/* Sizes below match the original look exactly on a 1920x1080 screen and scale
+   proportionally everywhere else. */
 .slide-stage {
   position: relative;
   flex-direction: column;
   text-align: center;
-  padding: 8vh 10vw;
+  padding: 8cqh 10cqw;
 }
 
 .slide-bg-image-wrap {
@@ -120,21 +134,21 @@
 .slide-content {
   position: relative;
   z-index: 1;
-  max-width: 80vw;
+  max-width: 80cqw;
 }
 
 .slide-title {
-  font-size: clamp(38px, 6vw, 84px);
+  font-size: 4.4cqw;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 0.4cqh 2.8cqh rgba(0, 0, 0, 0.35);
 }
 
 
 .slide-subtitle {
-  margin-top: 24px;
-  font-size: clamp(18px, 2.2vw, 30px);
+  margin-top: 2.2cqh;
+  font-size: 1.6cqw;
   font-weight: 400;
   opacity: 0.88;
   line-height: 1.5;

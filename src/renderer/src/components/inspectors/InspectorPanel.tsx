@@ -1,6 +1,6 @@
 import { useProject } from '../../state/useProject'
 import { COUNTDOWN_SELECTION_ID } from '../../state/context'
-import { itemColorVar, itemIcon, itemTitle } from '../../lib/itemMeta'
+import { itemColorVar, itemIcon, itemTitle, itemTypeLabel } from '../../lib/itemMeta'
 import VideoInspector from './VideoInspector'
 import SlideshowInspector from './SlideshowInspector'
 import CountdownInspector from './CountdownInspector'
@@ -19,7 +19,7 @@ export default function InspectorPanel(): React.JSX.Element {
 
   if (selectedItemId === COUNTDOWN_SELECTION_ID) {
     return (
-      <div className="inspector-panel">
+      <div className="inspector-panel" key={COUNTDOWN_SELECTION_ID}>
         <div className="inspector-header">
           <span className="inspector-icon" style={{ background: 'var(--countdown-color)' }}>
             ⏱️
@@ -46,18 +46,19 @@ export default function InspectorPanel(): React.JSX.Element {
     )
   }
 
+  // Keyed by item so switching items starts at the top instead of mid-scroll.
   return (
-    <div className="inspector-panel">
+    <div className="inspector-panel" key={item.id}>
       <div className="inspector-header">
         <span className="inspector-icon" style={{ background: itemColorVar(item.type) }}>
           {itemIcon(item.type)}
         </span>
         <div>
           <div className="inspector-title">{itemTitle(item)}</div>
-          <div className="inspector-type">{item.type} item</div>
+          <div className="inspector-type">{itemTypeLabel(item)}</div>
         </div>
       </div>
-      <div className="inspector-body">
+      <div className={`inspector-body ${item.type === 'slideshow' ? 'inspector-body-wide' : ''}`}>
         {item.type === 'video' && <VideoInspector item={item} />}
         {item.type === 'slideshow' && <SlideshowInspector item={item} />}
       </div>

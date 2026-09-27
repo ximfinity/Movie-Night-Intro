@@ -55,6 +55,7 @@ export interface ProjectContextValue {
   closeProject: () => void
   undo: () => void
   redo: () => void
+  /** Inserts after the selected item (or appends) and selects the new item. */
   addItem: (item: PlaylistItem) => void
   updateItem: (id: string, patch: Partial<PlaylistItem>) => void
   removeItem: (id: string) => void
@@ -64,14 +65,19 @@ export interface ProjectContextValue {
   updateCountdown: (patch: Partial<CountdownConfig>) => void
   importToLibrary: (kind: MediaKind) => Promise<ImportedMediaFile[]>
   removeFromLibrary: (kind: MediaKind, fileName: string) => void
-  addFrame: (itemId: string, content?: SlideFrameContent) => void
+  /** Appends a slide in the group's current look; returns its id. */
+  addFrame: (itemId: string, content?: SlideFrameContent) => string
   updateFrame: (itemId: string, frameId: string, patch: Partial<SlideFrame>) => void
   removeFrame: (itemId: string, frameId: string) => void
-  moveFrame: (itemId: string, frameId: string, direction: 'up' | 'down') => void
+  reorderFrames: (itemId: string, fromIndex: number, toIndex: number) => void
+  /** Copies one slide's theme, animation and duration onto every slide in its group. */
+  applyStyleToGroup: (itemId: string, frameId: string) => void
   /** Duplicates the frame in place within its own group, and stores a copy in the
-   * clipboard so it can also be pasted into a different slideshow item. */
-  copyFrame: (itemId: string, frameId: string) => void
-  pasteFrame: (itemId: string) => void
+   * clipboard so it can also be pasted into a different slideshow item. Returns the
+   * duplicate's id. */
+  copyFrame: (itemId: string, frameId: string) => string | null
+  /** Appends the clipboard slide to a group; returns its id. */
+  pasteFrame: (itemId: string) => string | null
   dismissMissingMedia: () => void
 }
 

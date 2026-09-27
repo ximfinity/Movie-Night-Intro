@@ -11,7 +11,12 @@ import type {
   SlideFrameContent
 } from '@shared/types'
 import { PROJECT_FILE_NAME } from '@shared/types'
-import { cloneSlideshowItem, createEmptyProject, createSlideFrame } from '@shared/factory'
+import {
+  cloneSlideshowItem,
+  createEmptyProject,
+  createSlideFrame,
+  slideStyleOf
+} from '@shared/factory'
 import { collectMediaRefs, normalizeProject } from '@shared/projectFormat'
 import { libraryKey } from '@shared/paths'
 import { userMessage } from '../lib/errors'
@@ -184,10 +189,19 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     [commit]
   )
 
+  /** Adds an item right after the selected one (or at the end), and selects it — so
+   * several added in a row keep their order. */
   const addItem = useCallback(
     (item: PlaylistItem) => {
-      mutateItems((items) => [...items, item])
+      const after = stateRef.current.selectedItemId
+      mutateItems((items) => {
+        const idx = items.findIndex((it) => it.id === after)
+        return idx === -1
+          ? [...items, item]
+          : [...items.slice(0, idx + 1), item, ...items.slice(idx + 1)]
+      })
       setState((s) => ({ ...s, selectedItemId: item.id }))
+      stateRef.current = { ...stateRef.current, selectedItemId: item.id }
     },
     [mutateItems]
   )
@@ -320,9 +334,30 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     [mutateItems]
   )
 
+  /** Appends a slide that copies the look (theme, animation, duration) of the group's last
+   * slide, so a group stays consistent without re-picking settings. Returns its id. */
   const addFrame = useCallback(
-    (itemId: string, content: SlideFrameContent = 'text') => {
-      mutateFrames(itemId, (frames) => [...frames, createSlideFrame(content)])
+    (itemId: string, content: SlideFrameContent = 'text'): string => {
+      const id = uuid()
+      mutateFrames(itemId, (frames) => {
+        const last = frames[frames.length - 1]
+        const style = last ? slideStyleOf(last) : undefined
+        return [...frames, { ...createSlideFrame(content, style), id }]
+      })
+      return id
+    },
+    [mutateFrames]
+  )
+
+  /** Gives every slide in the group the look of one slide. */
+  const applyStyleToGroup = useCallback(
+    (itemId: string, frameId: string) => {
+      mutateFrames(itemId, (frames) => {
+        const source = frames.find((f) => f.id === frameId)
+        if (!source) return frames
+        const style = slideStyleOf(source)
+        return frames.map((f) => ({ ...f, ...style }))
+      })
     },
     [mutateFrames]
   )
@@ -347,14 +382,20 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     [mutateFrames]
   )
 
-  const moveFrame = useCallback(
-    (itemId: string, frameId: string, direction: 'up' | 'down') => {
+  const reorderFrames = useCallback(
+    (itemId: string, fromIndex: number, toIndex: number) => {
       mutateFrames(itemId, (frames) => {
-        const idx = frames.findIndex((f) => f.id === frameId)
-        const target = direction === 'up' ? idx - 1 : idx + 1
-        if (idx === -1 || target < 0 || target >= frames.length) return frames
+        if (
+          fromIndex === toIndex ||
+          !frames[fromIndex] ||
+          toIndex < 0 ||
+          toIndex >= frames.length
+        ) {
+          return frames
+        }
         const next = [...frames]
-        ;[next[idx], next[target]] = [next[target], next[idx]]
+        const [moved] = next.splice(fromIndex, 1)
+        next.splice(toIndex, 0, moved)
         return next
       })
     },
@@ -362,25 +403,33 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
   )
 
   const copyFrame = useCallback(
-    (itemId: string, frameId: string) => {
+    (itemId: string, frameId: string): string | null => {
       const item = stateRef.current.project?.items.find((it) => it.id === itemId)
       const original = item?.type === 'slideshow' ? item.frames.find((f) => f.id === frameId) : null
-      if (!original) return
+      if (!original) return null
+      const cloneId = uuid()
       mutateFrames(itemId, (frames) => {
         const idx = frames.findIndex((f) => f.id === frameId)
-        const clone: SlideFrame = { ...original, id: uuid() }
+        const clone: SlideFrame = {
+          ...original,
+          id: cloneId,
+          subtitleOptions: [...original.subtitleOptions]
+        }
         return [...frames.slice(0, idx + 1), clone, ...frames.slice(idx + 1)]
       })
       setState((s) => ({ ...s, copiedFrame: { ...original } }))
+      return cloneId
     },
     [mutateFrames]
   )
 
   const pasteFrame = useCallback(
-    (itemId: string) => {
+    (itemId: string): string | null => {
       const copied = stateRef.current.copiedFrame
-      if (!copied) return
-      mutateFrames(itemId, (frames) => [...frames, { ...copied, id: uuid() }])
+      if (!copied) return null
+      const id = uuid()
+      mutateFrames(itemId, (frames) => [...frames, { ...copied, id }])
+      return id
     },
     [mutateFrames]
   )
@@ -414,7 +463,8 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       addFrame,
       updateFrame,
       removeFrame,
-      moveFrame,
+      reorderFrames,
+      applyStyleToGroup,
       copyFrame,
       pasteFrame,
       dismissMissingMedia
@@ -440,7 +490,8 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       addFrame,
       updateFrame,
       removeFrame,
-      moveFrame,
+      reorderFrames,
+      applyStyleToGroup,
       copyFrame,
       pasteFrame,
       dismissMissingMedia

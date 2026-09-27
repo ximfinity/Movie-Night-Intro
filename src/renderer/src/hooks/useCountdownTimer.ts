@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 
+/** Smallest change in remaining seconds worth re-rendering for (the ring animates between
+ * updates with a CSS transition, and the digits only change once a second). */
+const REPORT_STEP_SEC = 0.1
+
 /** Frame-driven countdown that can be paused, counting down from durationSec to 0. */
 export function useCountdownTimer(
   durationSec: number,
@@ -8,6 +12,7 @@ export function useCountdownTimer(
 ): number {
   const [remaining, setRemaining] = useState(durationSec)
   const remainingRef = useRef(durationSec)
+  const reportedRef = useRef(durationSec)
   const lastTsRef = useRef<number | null>(null)
   const doneRef = useRef(false)
   const onCompleteRef = useRef(onComplete)
@@ -24,7 +29,13 @@ export function useCountdownTimer(
       lastTsRef.current = ts
       if (!paused && !doneRef.current) {
         remainingRef.current = Math.max(0, remainingRef.current - dt)
-        setRemaining(remainingRef.current)
+        if (
+          remainingRef.current === 0 ||
+          reportedRef.current - remainingRef.current >= REPORT_STEP_SEC
+        ) {
+          reportedRef.current = remainingRef.current
+          setRemaining(remainingRef.current)
+        }
         if (remainingRef.current <= 0) {
           doneRef.current = true
           onCompleteRef.current()

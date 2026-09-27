@@ -13,7 +13,15 @@ const SECTIONS: { kind: MediaKind; label: string; icon: string }[] = [
 
 export default function MediaLibraryPanel(): React.JSX.Element {
   const { project, addItem, importToLibrary, removeFromLibrary } = useProject()
-  const [open, setOpen] = useState(true)
+  // Start collapsed once there's something in it, so the playlist isn't pushed off screen.
+  const [open, setOpen] = useState(
+    () =>
+      !project ||
+      project.library.videos.length +
+        project.library.audio.length +
+        project.library.images.length ===
+        0
+  )
 
   if (!project) return <></>
 

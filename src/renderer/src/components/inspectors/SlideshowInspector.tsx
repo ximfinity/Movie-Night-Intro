@@ -1,3 +1,21 @@
+import { useState } from 'react'
+import {
+  DndContext,
+  KeyboardSensor,
+  MeasuringStrategy,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type {
   ImportedMediaFile,
   OverlayPosition,
@@ -6,10 +24,14 @@ import type {
   SlideshowItem,
   TextAnimation
 } from '@shared/types'
+import { SUBTITLE_MAX_CHARS } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
-import { RANDOM_THEME, SLIDE_THEMES } from '@shared/slideThemes'
+import { RANDOM_THEME, findSlideTheme } from '@shared/slideThemes'
 import { useProject } from '../../state/useProject'
+import { autoGroupName, frameLabel } from '../../lib/itemMeta'
 import TransitionSelect from './TransitionSelect'
+import ThemeSwatches from './ThemeSwatches'
+import SlidePreview from './SlidePreview'
 
 const ANIMATIONS: { value: TextAnimation; label: string }[] = [
   { value: 'fade-up', label: 'Fade up' },
@@ -27,23 +49,150 @@ const POSITIONS: { value: OverlayPosition; label: string }[] = [
 ]
 
 export default function SlideshowInspector({ item }: { item: SlideshowItem }): React.JSX.Element {
-  const { dir, project, updateItem, importToLibrary, addFrame, copiedFrame, pasteFrame } =
-    useProject()
+  const { dir, updateItem, addFrame, copiedFrame, pasteFrame, reorderFrames } = useProject()
+  const [expandedId, setExpandedId] = useState(item.frames[0]?.id ?? '')
+  // Everything collapses while dragging so all rows are the same height (a tall open
+  // editor makes drop positions jump).
+  const [dragging, setDragging] = useState(false)
+  const expandedIndex = Math.max(
+    0,
+    item.frames.findIndex((f) => f.id === expandedId)
+  )
+  const expanded = item.frames[expandedIndex]
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  function handleDragEnd(event: DragEndEvent): void {
+    setDragging(false)
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const from = item.frames.findIndex((f) => f.id === active.id)
+    const to = item.frames.findIndex((f) => f.id === over.id)
+    if (from !== -1 && to !== -1) reorderFrames(item.id, from, to)
+  }
+
+  function expand(id: string | null): void {
+    if (id) setExpandedId(id)
+  }
+
+  return (
+    <div className="slideshow-inspector">
+      <div className="slideshow-settings">
+        <label className="field">
+          <span className="field-label">Group name</span>
+          <input
+            type="text"
+            value={item.name}
+            placeholder={autoGroupName(item)}
+            onChange={(e) => updateItem(item.id, { name: e.target.value })}
+          />
+        </label>
+
+        <TransitionSelect
+          value={item.transition}
+          onChange={(transition) => updateItem(item.id, { transition })}
+        />
+        <p className="inspector-hint">
+          Also used between slides when this group rotates through more than one.
+        </p>
+
+        <MusicSettings item={item} />
+
+        <div className="frames-header">
+          <span className="section-label">Slides ({item.frames.length})</span>
+          <div className="frames-header-actions">
+            <button className="btn btn-ghost" onClick={() => expand(addFrame(item.id, 'text'))}>
+              + Text
+            </button>
+            <button className="btn btn-ghost" onClick={() => expand(addFrame(item.id, 'image'))}>
+              + Image
+            </button>
+            {copiedFrame && (
+              <button
+                className="btn btn-ghost"
+                title={`Paste copied slide: ${frameLabel(copiedFrame)}`}
+                onClick={() => expand(pasteFrame(item.id))}
+              >
+                + Paste
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="inspector-hint">
+          New slides copy the look of the last one. Drag ⠿ to reorder; click a slide to edit it.
+        </p>
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          // Rows collapse when a drag starts, so drop targets must be re-measured live.
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+          onDragStart={() => setDragging(true)}
+          onDragCancel={() => setDragging(false)}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={item.frames.map((f) => f.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <ul className="frame-list">
+              {item.frames.map((frame, index) => (
+                <FrameCard
+                  key={frame.id}
+                  itemId={item.id}
+                  frame={frame}
+                  index={index}
+                  count={item.frames.length}
+                  expanded={!dragging && frame.id === expanded?.id}
+                  onExpand={() => setExpandedId(frame.id)}
+                  onDuplicated={expand}
+                  dir={dir!}
+                />
+              ))}
+            </ul>
+          </SortableContext>
+        </DndContext>
+      </div>
+
+      <div className="slideshow-preview-col">
+        {expanded && (
+          <SlidePreview
+            frame={expanded}
+            dir={dir!}
+            index={expandedIndex}
+            count={item.frames.length}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MusicSettings({ item }: { item: SlideshowItem }): React.JSX.Element {
+  const { project, updateItem, importToLibrary } = useProject()
   const library = project!.library
+  const music = item.music
 
   function applyMusic(kind: SlideMusicKind, file: ImportedMediaFile): void {
     updateItem(item.id, {
-      music: {
-        kind,
-        fileName: file.fileName,
-        displayName: file.displayName,
-        volume: 0.8,
-        fadeInSec: 1.5,
-        fadeOutSec: 1.5,
-        position: 'bottom-left',
-        sizeScale: 3,
-        loopSlidesUntilEnd: false
-      }
+      music:
+        music && music.kind === kind
+          ? // Switching to another file keeps the volume, corner, size and loop settings.
+            { ...music, fileName: file.fileName, displayName: file.displayName }
+          : {
+              kind,
+              fileName: file.fileName,
+              displayName: file.displayName,
+              volume: 0.8,
+              fadeInSec: 1.5,
+              fadeOutSec: 1.5,
+              position: 'bottom-left',
+              sizeScale: 3,
+              loopSlidesUntilEnd: false
+            }
     })
   }
 
@@ -52,22 +201,14 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
     if (files.length > 0) applyMusic(kind, files[0])
   }
 
-  const musicLibraryFiles = item.music?.kind === 'video' ? library.videos : library.audio
+  const musicLibraryFiles = music?.kind === 'video' ? library.videos : library.audio
 
   return (
-    <div>
-      <TransitionSelect
-        value={item.transition}
-        onChange={(transition) => updateItem(item.id, { transition })}
-      />
-      <p className="inspector-hint">
-        Also used between slides when this group rotates through more than one.
-      </p>
+    <div className="field">
+      <span className="section-label">Music (plays for this whole group)</span>
 
-      <div className="field">
-        <span className="field-label">Music (plays for this whole group)</span>
-
-        {!item.music && (
+      {!music && (
+        <>
           <div className="frame-content-toggle">
             <button className="btn frame-toggle-btn" onClick={() => handleImportMusic('audio')}>
               🎵 Audio track
@@ -76,227 +217,236 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
               🎬 Pop-up video
             </button>
           </div>
-        )}
+          <p className="inspector-hint">
+            An audio track plays quietly in the background. A pop-up video plays with its picture in
+            a corner box while the slides rotate.
+          </p>
+        </>
+      )}
 
-        {item.music ? (
-          <div className="music-settings">
-            <div className="music-file-row">
-              <span className="music-file-name">
-                {item.music.kind === 'video' ? '🎬' : '🎵'} {item.music.displayName}
-              </span>
-              <button
-                className="btn btn-ghost btn-danger"
-                onClick={() => updateItem(item.id, { music: null })}
+      {music && (
+        <div className="music-settings">
+          <div className="music-file-row">
+            <span className="music-file-name">
+              {music.kind === 'video' ? '🎬' : '🎵'} {music.displayName}
+            </span>
+            <button
+              className="btn btn-ghost btn-danger"
+              onClick={() => updateItem(item.id, { music: null })}
+            >
+              Remove
+            </button>
+          </div>
+
+          {musicLibraryFiles.length > 0 && (
+            <label className="field">
+              <span className="field-label">Switch to another {music.kind} file</span>
+              <select
+                value={music.fileName}
+                onChange={(e) => {
+                  const f = musicLibraryFiles.find((x) => x.fileName === e.target.value)
+                  if (f) applyMusic(music.kind, f)
+                }}
               >
-                Remove
-              </button>
-            </div>
+                {musicLibraryFiles.map((f) => (
+                  <option key={f.fileName} value={f.fileName}>
+                    {f.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
-            {musicLibraryFiles.length > 0 && (
+          <label className="field">
+            <span className="field-label">
+              Volume <span>{Math.round(music.volume * 100)}%</span>
+            </span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={music.volume}
+              onChange={(e) =>
+                updateItem(item.id, { music: { ...music, volume: Number(e.target.value) } })
+              }
+            />
+          </label>
+
+          {music.kind === 'video' && (
+            <>
               <label className="field">
-                <span className="field-label">Switch to another {item.music.kind} file</span>
+                <span className="field-label">Corner of the screen</span>
                 <select
-                  value={item.music.fileName}
-                  onChange={(e) => {
-                    const f = musicLibraryFiles.find((x) => x.fileName === e.target.value)
-                    if (f) applyMusic(item.music!.kind, f)
-                  }}
+                  value={music.position}
+                  onChange={(e) =>
+                    updateItem(item.id, {
+                      music: { ...music, position: e.target.value as OverlayPosition }
+                    })
+                  }
                 >
-                  {musicLibraryFiles.map((f) => (
-                    <option key={f.fileName} value={f.fileName}>
-                      {f.displayName}
+                  {POSITIONS.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
                     </option>
                   ))}
                 </select>
               </label>
-            )}
 
-            <label className="field">
-              <span className="field-label">
-                Volume <span>{Math.round(item.music.volume * 100)}%</span>
-              </span>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={item.music.volume}
-                onChange={(e) =>
-                  updateItem(item.id, { music: { ...item.music!, volume: Number(e.target.value) } })
-                }
-              />
-            </label>
+              <label className="field">
+                <span className="field-label">
+                  Size <span>{Math.round(music.sizeScale * 100)}%</span>
+                </span>
+                <input
+                  type="range"
+                  min={1}
+                  max={6}
+                  step={0.25}
+                  value={music.sizeScale}
+                  onChange={(e) =>
+                    updateItem(item.id, { music: { ...music, sizeScale: Number(e.target.value) } })
+                  }
+                />
+              </label>
 
-            {item.music.kind === 'video' && (
-              <>
-                <label className="field">
-                  <span className="field-label">Corner of the screen</span>
-                  <select
-                    value={item.music.position}
-                    onChange={(e) =>
-                      updateItem(item.id, {
-                        music: { ...item.music!, position: e.target.value as OverlayPosition }
-                      })
-                    }
-                  >
-                    {POSITIONS.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="field">
-                  <span className="field-label">
-                    Size <span>{Math.round(item.music.sizeScale * 100)}%</span>
-                  </span>
-                  <input
-                    type="range"
-                    min={1}
-                    max={6}
-                    step={0.25}
-                    value={item.music.sizeScale}
-                    onChange={(e) =>
-                      updateItem(item.id, {
-                        music: { ...item.music!, sizeScale: Number(e.target.value) }
-                      })
-                    }
-                  />
-                </label>
-
-                <label className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={item.music.loopSlidesUntilEnd}
-                    onChange={(e) =>
-                      updateItem(item.id, {
-                        music: { ...item.music!, loopSlidesUntilEnd: e.target.checked }
-                      })
-                    }
-                  />
-                  Repeat the slides in a loop until the video ends
-                </label>
-                {item.music.loopSlidesUntilEnd && (
-                  <p className="inspector-hint">
-                    The slides above keep rotating for as long as the video plays, however long that
-                    is — the group moves on to the next playlist item only once the video finishes.
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        ) : (
-          <p className="inspector-hint">
-            An audio track plays quietly in the background. A pop-up video plays with its picture in
-            a small corner box, like a pop-up video, while the slides rotate.
-          </p>
-        )}
-      </div>
-
-      <div className="frames-header">
-        <span className="field-label">Slides in this group ({item.frames.length})</span>
-        <div className="frames-header-actions">
-          <button className="btn btn-ghost" onClick={() => addFrame(item.id, 'text')}>
-            + Text
-          </button>
-          <button className="btn btn-ghost" onClick={() => addFrame(item.id, 'image')}>
-            + Image
-          </button>
-          {copiedFrame && (
-            <button
-              className="btn btn-ghost"
-              title={`Paste copied slide: ${copiedFrame.title || copiedFrame.backgroundImageDisplayName || 'slide'}`}
-              onClick={() => pasteFrame(item.id)}
-            >
-              + Paste
-            </button>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={music.loopSlidesUntilEnd}
+                  onChange={(e) =>
+                    updateItem(item.id, {
+                      music: { ...music, loopSlidesUntilEnd: e.target.checked }
+                    })
+                  }
+                />
+                Repeat the slides in a loop until the video ends
+              </label>
+              {music.loopSlidesUntilEnd && (
+                <p className="inspector-hint">
+                  The slides keep rotating for as long as the video plays, however long that is —
+                  the group moves on to the next playlist item only once the video finishes.
+                </p>
+              )}
+            </>
           )}
         </div>
-      </div>
-
-      {item.frames.map((frame, index) => (
-        <FrameEditor
-          key={frame.id}
-          itemId={item.id}
-          frame={frame}
-          index={index}
-          count={item.frames.length}
-          dir={dir!}
-        />
-      ))}
+      )}
     </div>
   )
 }
 
-function FrameEditor({
+function FrameCard({
   itemId,
   frame,
   index,
   count,
+  expanded,
+  onExpand,
+  onDuplicated,
   dir
 }: {
   itemId: string
   frame: SlideFrame
   index: number
   count: number
+  expanded: boolean
+  onExpand: () => void
+  onDuplicated: (id: string | null) => void
   dir: string
 }): React.JSX.Element {
-  const { project, updateFrame, removeFrame, moveFrame, copyFrame, importToLibrary } = useProject()
-  const library = project!.library
-
-  function patch(p: Partial<SlideFrame>): void {
-    updateFrame(itemId, frame.id, p)
-  }
-
-  function applyImage(file: ImportedMediaFile): void {
-    patch({ backgroundImage: file.fileName, backgroundImageDisplayName: file.displayName })
-  }
-
-  async function handleImportImage(): Promise<void> {
-    const files = await importToLibrary('image')
-    if (files.length > 0) applyImage(files[0])
-  }
+  const { removeFrame, copyFrame } = useProject()
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: frame.id
+  })
+  const variations = frame.subtitleOptions.filter((s) => s.trim()).length
+  const theme = frame.theme === RANDOM_THEME ? null : findSlideTheme(frame.theme)
 
   return (
-    <div className="frame-editor">
-      <div className="frame-editor-header">
-        <span className="frame-editor-index">Slide {index + 1}</span>
-        <div className="frame-editor-controls">
+    <li
+      ref={setNodeRef}
+      className={`frame-card ${expanded ? 'frame-card-expanded' : ''}`}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1
+      }}
+    >
+      <div className="frame-row" onClick={onExpand}>
+        <button
+          className="item-card-handle"
+          {...attributes}
+          {...listeners}
+          title="Drag to reorder"
+          aria-label={`Reorder slide ${index + 1}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          ⠿
+        </button>
+        <span className="frame-row-index">{index + 1}</span>
+        <span
+          className="frame-row-swatch"
+          style={theme ? { background: theme.background } : undefined}
+          title={frame.content === 'image' ? 'Image slide' : theme ? theme.label : 'Random theme'}
+        >
+          {frame.content === 'image' ? '🖼️' : theme ? '' : '🎲'}
+        </span>
+        <span className="frame-row-label">{frameLabel(frame)}</span>
+        <span className="frame-row-meta">
+          {frame.content === 'text' && variations > 1 ? `${variations} lines · ` : ''}
+          {frame.durationSec}s
+        </span>
+        <span className="frame-row-actions">
           <button
             className="btn btn-ghost icon-btn"
-            disabled={index === 0}
-            title="Move up"
-            onClick={() => moveFrame(itemId, frame.id, 'up')}
-          >
-            ▲
-          </button>
-          <button
-            className="btn btn-ghost icon-btn"
-            disabled={index === count - 1}
-            title="Move down"
-            onClick={() => moveFrame(itemId, frame.id, 'down')}
-          >
-            ▼
-          </button>
-          <button
-            className="btn btn-ghost icon-btn"
-            title="Duplicate, and copy for reuse in another slideshow"
-            onClick={() => copyFrame(itemId, frame.id)}
+            title="Duplicate, and copy for pasting into another group"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDuplicated(copyFrame(itemId, frame.id))
+            }}
           >
             ⧉
           </button>
           <button
             className="btn btn-ghost icon-btn btn-danger"
             disabled={count === 1}
-            title="Remove this slide"
-            onClick={() => removeFrame(itemId, frame.id)}
+            title={
+              count === 1
+                ? 'A group needs at least one slide'
+                : 'Remove this slide (undo with Ctrl+Z)'
+            }
+            onClick={(e) => {
+              e.stopPropagation()
+              removeFrame(itemId, frame.id)
+            }}
           >
             ✕
           </button>
-        </div>
+        </span>
       </div>
+      {expanded && <FrameEditor itemId={itemId} frame={frame} count={count} dir={dir} />}
+    </li>
+  )
+}
 
+function FrameEditor({
+  itemId,
+  frame,
+  count,
+  dir
+}: {
+  itemId: string
+  frame: SlideFrame
+  count: number
+  dir: string
+}): React.JSX.Element {
+  const { updateFrame, applyStyleToGroup } = useProject()
+
+  function patch(p: Partial<SlideFrame>): void {
+    updateFrame(itemId, frame.id, p)
+  }
+
+  return (
+    <div className="frame-editor">
       <div className="frame-content-toggle">
         <button
           className={`btn frame-toggle-btn ${frame.content === 'text' ? 'frame-toggle-active' : ''}`}
@@ -322,54 +472,8 @@ function FrameEditor({
               onChange={(e) => patch({ title: e.target.value })}
             />
           </label>
-          <div className="field">
-            <span className="field-label">
-              Body text{' '}
-              {frame.subtitleOptions.length > 1 &&
-                '(one is picked at random each time this slide shows)'}
-            </span>
-            {frame.subtitleOptions.map((option, i) => (
-              <div className="subtitle-option-row" key={i}>
-                <textarea
-                  rows={2}
-                  value={option}
-                  placeholder={frame.subtitleOptions.length > 1 ? `Option ${i + 1}` : ''}
-                  onChange={(e) => {
-                    const next = [...frame.subtitleOptions]
-                    next[i] = e.target.value
-                    patch({ subtitleOptions: next })
-                  }}
-                />
-                <button
-                  className="btn btn-ghost icon-btn btn-danger"
-                  disabled={frame.subtitleOptions.length <= 1}
-                  title="Remove this option"
-                  onClick={() =>
-                    patch({ subtitleOptions: frame.subtitleOptions.filter((_, idx) => idx !== i) })
-                  }
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            <button
-              className="btn btn-ghost"
-              onClick={() => patch({ subtitleOptions: [...frame.subtitleOptions, ''] })}
-            >
-              + Add random variation
-            </button>
-          </div>
-          <label className="field">
-            <span className="field-label">Theme</span>
-            <select value={frame.theme} onChange={(e) => patch({ theme: e.target.value })}>
-              <option value={RANDOM_THEME}>🎲 Random each time</option>
-              {SLIDE_THEMES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SubtitleEditor frame={frame} patch={patch} />
+          <ThemeSwatches value={frame.theme} onChange={(theme) => patch({ theme })} />
           <label className="field">
             <span className="field-label">Text animation</span>
             <select
@@ -383,84 +487,15 @@ function FrameEditor({
               ))}
             </select>
           </label>
-          <div className="field">
-            <span className="field-label">Optional background image or GIF</span>
-            {frame.backgroundImage && dir ? (
-              <div className="media-preview">
-                <img src={mediaFileUrl(dir, 'image', frame.backgroundImage)} alt="" />
-                <button
-                  className="btn btn-ghost btn-danger"
-                  onClick={() => patch({ backgroundImage: null, backgroundImageDisplayName: null })}
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <div className="picker-row">
-                <button className="btn" onClick={handleImportImage}>
-                  + Import new
-                </button>
-                {library.images.length > 0 && (
-                  <select
-                    value=""
-                    onChange={(e) => {
-                      const f = library.images.find((x) => x.fileName === e.target.value)
-                      if (f) applyImage(f)
-                    }}
-                  >
-                    <option value="" disabled>
-                      From library…
-                    </option>
-                    {library.images.map((f) => (
-                      <option key={f.fileName} value={f.fileName}>
-                        {f.displayName}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            )}
-          </div>
+          <ImagePicker
+            label="Optional background image or GIF"
+            frame={frame}
+            dir={dir}
+            patch={patch}
+          />
         </>
       ) : (
-        <div className="field">
-          <span className="field-label">Image or GIF</span>
-          {frame.backgroundImage && dir ? (
-            <div className="media-preview">
-              <img src={mediaFileUrl(dir, 'image', frame.backgroundImage)} alt="" />
-              <button
-                className="btn btn-ghost btn-danger"
-                onClick={() => patch({ backgroundImage: null, backgroundImageDisplayName: null })}
-              >
-                Remove
-              </button>
-            </div>
-          ) : (
-            <div className="picker-row">
-              <button className="btn" onClick={handleImportImage}>
-                + Import new
-              </button>
-              {library.images.length > 0 && (
-                <select
-                  value=""
-                  onChange={(e) => {
-                    const f = library.images.find((x) => x.fileName === e.target.value)
-                    if (f) applyImage(f)
-                  }}
-                >
-                  <option value="" disabled>
-                    From library…
-                  </option>
-                  {library.images.map((f) => (
-                    <option key={f.fileName} value={f.fileName}>
-                      {f.displayName}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-          )}
-        </div>
+        <ImagePicker label="Image or GIF" frame={frame} dir={dir} patch={patch} />
       )}
 
       <label className="field">
@@ -476,6 +511,139 @@ function FrameEditor({
           onChange={(e) => patch({ durationSec: Number(e.target.value) })}
         />
       </label>
+
+      {count > 1 && (
+        <button
+          className="btn btn-ghost apply-look-btn"
+          onClick={() => applyStyleToGroup(itemId, frame.id)}
+          title="Copy this slide's theme, animation and duration to every slide in the group"
+        >
+          Use this look for all {count} slides
+        </button>
+      )}
+    </div>
+  )
+}
+
+function SubtitleEditor({
+  frame,
+  patch
+}: {
+  frame: SlideFrame
+  patch: (p: Partial<SlideFrame>) => void
+}): React.JSX.Element {
+  const options = frame.subtitleOptions
+  return (
+    <div className="field">
+      <span className="field-label">
+        Subtitle{' '}
+        {options.length > 1 && <span>one of {options.length} picked at random each time</span>}
+      </span>
+      {options.map((option, i) => (
+        <div className="subtitle-option" key={i}>
+          <div className="subtitle-option-row">
+            <textarea
+              rows={1}
+              value={option}
+              placeholder={
+                options.length > 1 ? `Variation ${i + 1}` : 'Optional line under the title'
+              }
+              onChange={(e) => {
+                const next = [...options]
+                next[i] = e.target.value
+                patch({ subtitleOptions: next })
+              }}
+            />
+            <button
+              className="btn btn-ghost icon-btn btn-danger"
+              disabled={options.length <= 1}
+              title="Remove this variation"
+              onClick={() => patch({ subtitleOptions: options.filter((_, idx) => idx !== i) })}
+            >
+              ✕
+            </button>
+          </div>
+          {option.length > SUBTITLE_MAX_CHARS && (
+            <span className="char-warning">
+              {option.length}/{SUBTITLE_MAX_CHARS} characters — may wrap onto a second line
+            </span>
+          )}
+        </div>
+      ))}
+      <div className="subtitle-actions">
+        <button
+          className="btn btn-ghost"
+          onClick={() => patch({ subtitleOptions: [...options, ''] })}
+        >
+          + Add variation
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ImagePicker({
+  label,
+  frame,
+  dir,
+  patch
+}: {
+  label: string
+  frame: SlideFrame
+  dir: string
+  patch: (p: Partial<SlideFrame>) => void
+}): React.JSX.Element {
+  const { project, importToLibrary } = useProject()
+  const images = project!.library.images
+
+  function applyImage(file: ImportedMediaFile): void {
+    patch({ backgroundImage: file.fileName, backgroundImageDisplayName: file.displayName })
+  }
+
+  async function handleImportImage(): Promise<void> {
+    const files = await importToLibrary('image')
+    if (files.length > 0) applyImage(files[0])
+  }
+
+  return (
+    <div className="field">
+      <span className="field-label">{label}</span>
+      {frame.backgroundImage ? (
+        <div className="media-preview">
+          <img src={mediaFileUrl(dir, 'image', frame.backgroundImage)} alt="" />
+          <span className="media-preview-name">{frame.backgroundImageDisplayName}</span>
+          <button
+            className="btn btn-ghost btn-danger"
+            onClick={() => patch({ backgroundImage: null, backgroundImageDisplayName: null })}
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <div className="picker-row">
+          <button className="btn" onClick={handleImportImage}>
+            + Import new
+          </button>
+          {images.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => {
+                const f = images.find((x) => x.fileName === e.target.value)
+                if (f) applyImage(f)
+              }}
+            >
+              <option value="" disabled>
+                From library…
+              </option>
+              {images.map((f) => (
+                <option key={f.fileName} value={f.fileName}>
+                  {f.displayName}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
     </div>
   )
 }

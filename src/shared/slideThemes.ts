@@ -178,7 +178,3 @@ export const SLIDE_THEMES: SlideThemeDef[] = [
 export function findSlideTheme(id: string): SlideThemeDef {
   return SLIDE_THEMES.find((t) => t.id === id) ?? SLIDE_THEMES[0]
 }
-
-export function pickRandomSlideTheme(): SlideThemeDef {
-  return SLIDE_THEMES[Math.floor(Math.random() * SLIDE_THEMES.length)]
-}

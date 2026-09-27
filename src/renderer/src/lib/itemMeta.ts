@@ -1,4 +1,4 @@
-import type { PlaylistItem } from '@shared/types'
+import type { PlaylistItem, SlideFrame, SlideshowItem } from '@shared/types'
 
 export function itemIcon(type: PlaylistItem['type']): string {
   switch (type) {
@@ -18,20 +18,35 @@ export function itemColorVar(type: PlaylistItem['type']): string {
   }
 }
 
+/** What a slide group is called when it has no name of its own. */
+export function autoGroupName(item: SlideshowItem): string {
+  const first = item.frames[0]
+  if (item.frames.length === 1 && first) {
+    return first.content === 'image'
+      ? first.backgroundImageDisplayName || 'Image slide'
+      : first.title || 'Untitled slide'
+  }
+  return `Slide group · ${item.frames.length} slides`
+}
+
 export function itemTitle(item: PlaylistItem): string {
   switch (item.type) {
     case 'video':
       return item.displayName || 'Video clip'
-    case 'slideshow': {
-      const first = item.frames[0]
-      if (item.frames.length === 1) {
-        return first.content === 'image'
-          ? first.backgroundImageDisplayName || 'Image slide'
-          : first.title || 'Untitled slide'
-      }
-      return `Slideshow — ${item.frames.length} slides`
-    }
+    case 'slideshow':
+      return item.name.trim() || autoGroupName(item)
   }
+}
+
+export function itemTypeLabel(item: PlaylistItem): string {
+  return item.type === 'video' ? 'Video clip' : 'Slide group'
+}
+
+/** One-line summary of a slide for the collapsed slide list. */
+export function frameLabel(frame: SlideFrame): string {
+  if (frame.content === 'image')
+    return frame.backgroundImageDisplayName || 'Image slide (no image yet)'
+  return frame.title.trim() || 'Untitled slide'
 }
 
 export function itemSubtitle(item: PlaylistItem): string {

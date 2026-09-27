@@ -2,37 +2,55 @@ import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import type { SlideFrame } from '@shared/types'
 import { cssUrl, mediaFileUrl } from '@shared/paths'
-import { RANDOM_THEME, findSlideTheme, pickRandomSlideTheme } from '@shared/slideThemes'
-import { useCountdownTimer } from '../../hooks/useCountdownTimer'
+import { RANDOM_THEME, SLIDE_THEMES, findSlideTheme } from '@shared/slideThemes'
+import { createShuffleBag } from '@shared/shuffleBag'
+import { useFrameTimer } from '../../hooks/useFrameTimer'
 
-function pickSubtitle(options: string[]): string {
-  const nonEmpty = options.filter((s) => s.trim().length > 0)
-  if (nonEmpty.length === 0) return ''
-  return nonEmpty[Math.floor(Math.random() * nonEmpty.length)]
+// Separate bags for the show and the editor preview, so previewing doesn't use up the
+// show's rotation.
+const showSubtitleBag = createShuffleBag()
+const showThemeBag = createShuffleBag()
+const previewSubtitleBag = createShuffleBag()
+const previewThemeBag = createShuffleBag()
+
+function pickSubtitle(frame: SlideFrame, preview: boolean): string {
+  const options = frame.subtitleOptions.filter((s) => s.trim().length > 0)
+  if (options.length === 0) return ''
+  const bag = preview ? previewSubtitleBag : showSubtitleBag
+  return options[bag(frame.id, options.length)]
+}
+
+function pickTheme(frame: SlideFrame, preview: boolean): (typeof SLIDE_THEMES)[number] {
+  if (frame.theme !== RANDOM_THEME) return findSlideTheme(frame.theme)
+  const bag = preview ? previewThemeBag : showThemeBag
+  return SLIDE_THEMES[bag(frame.id, SLIDE_THEMES.length)]
 }
 
 /** Renders a single slideshow frame (text-on-background, or a full-bleed image) for its
  * own duration, then calls onDone. Music is handled one level up by SlideshowStage, since
- * it spans the whole rotation rather than any one frame. */
+ * it spans the whole rotation rather than any one frame. Sized with container units, so it
+ * renders identically fullscreen and in the editor's small live preview. */
 export default function SlideFrameView({
   frame,
   dir,
   paused,
-  onDone
+  onDone,
+  preview = false
 }: {
   frame: SlideFrame
   dir: string
   paused: boolean
   onDone: () => void
+  preview?: boolean
 }): React.JSX.Element {
-  useCountdownTimer(frame.durationSec, paused, onDone)
+  useFrameTimer(frame.durationSec, paused, onDone)
 
   // Picked once per mount (i.e. fresh each time this frame is actually shown — including
   // on a restart or manual re-visit — but stable for as long as it stays on screen).
-  const [subtitle] = useState(() => pickSubtitle(frame.subtitleOptions))
-  const [theme] = useState(() =>
-    frame.theme === RANDOM_THEME ? pickRandomSlideTheme() : findSlideTheme(frame.theme)
-  )
+  const [subtitle] = useState(() => pickSubtitle(frame, preview))
+  const [theme] = useState(() => pickTheme(frame, preview))
+  const typewriter = frame.content === 'text' && frame.textAnimation === 'typewriter'
+  const [typedChars, setTypedChars] = useState(typewriter ? 0 : Infinity)
 
   const bgImageUrl = frame.backgroundImage
     ? mediaFileUrl(dir, 'image', frame.backgroundImage)
@@ -58,41 +76,41 @@ export default function SlideFrameView({
   useEffect(() => {
     if (frame.content !== 'text') return undefined
     const title = titleRef.current
-    const subtitle = subtitleRef.current
+    const subtitleEl = subtitleRef.current
 
-    if (frame.textAnimation === 'typewriter' && title) {
-      const text = frame.title
-      title.textContent = ''
-      let i = 0
+    if (typewriter) {
+      const length = frame.title.length
       const id = setInterval(() => {
-        i += 1
-        title.textContent = text.slice(0, i)
-        if (i >= text.length) clearInterval(id)
+        setTypedChars((n) => {
+          if (n + 1 >= length) clearInterval(id)
+          return n + 1
+        })
       }, 45)
-      if (subtitle) {
+      if (subtitleEl) {
         gsap.fromTo(
-          subtitle,
+          subtitleEl,
           { opacity: 0 },
-          { opacity: 1, duration: 0.6, delay: Math.min(2, text.length * 0.045) }
+          { opacity: 1, duration: 0.6, delay: Math.min(2, length * 0.045) }
         )
       }
       return () => clearInterval(id)
     }
 
-    const targets = [title, subtitle].filter((n): n is HTMLHeadingElement | HTMLParagraphElement =>
-      Boolean(n)
+    const targets = [title, subtitleEl].filter(
+      (n): n is HTMLHeadingElement | HTMLParagraphElement => Boolean(n)
     )
     if (targets.length === 0) return undefined
 
+    // Percent offsets so the motion scales with the slide (fullscreen or preview).
     const fromVars: gsap.TweenVars = { opacity: 0 }
-    if (frame.textAnimation === 'fade-up') fromVars.y = 24
-    if (frame.textAnimation === 'slide-in') fromVars.x = -40
+    if (frame.textAnimation === 'fade-up') fromVars.yPercent = 30
+    if (frame.textAnimation === 'slide-in') fromVars.xPercent = -8
     if (frame.textAnimation === 'zoom-in') fromVars.scale = 0.85
 
     const tween = gsap.fromTo(targets, fromVars, {
       opacity: 1,
-      y: 0,
-      x: 0,
+      yPercent: 0,
+      xPercent: 0,
       scale: 1,
       duration: 0.7,
       stagger: 0.12,
@@ -145,7 +163,7 @@ export default function SlideFrameView({
             WebkitTextFillColor: 'transparent'
           }}
         >
-          {frame.title}
+          {typewriter ? frame.title.slice(0, typedChars) : frame.title}
         </h1>
         {subtitle && (
           <p ref={subtitleRef} className="slide-subtitle">

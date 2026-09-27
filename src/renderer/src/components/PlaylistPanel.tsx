@@ -69,8 +69,12 @@ export default function PlaylistPanel(): React.JSX.Element {
           <button className="btn add-btn add-video" onClick={handleAddVideo}>
             🎬 Video Clip
           </button>
-          <button className="btn add-btn add-slide" onClick={handleAddSlide}>
-            📝 Text Slide
+          <button
+            className="btn add-btn add-slide"
+            onClick={handleAddSlide}
+            title="A group of text or image slides that rotate, with optional music"
+          >
+            📝 Slide Group
           </button>
         </div>
 
@@ -78,8 +82,8 @@ export default function PlaylistPanel(): React.JSX.Element {
           <div className="playlist-empty">
             <p>Your playlist is empty.</p>
             <p className="playlist-empty-hint">
-              Add video clips and announcement slides below — the countdown overlay above plays on
-              top automatically, so you don&apos;t need to add it here.
+              Add video clips and slide groups above — the countdown overlay above plays on top
+              automatically, so you don&apos;t need to add it here.
             </p>
           </div>
         ) : (
