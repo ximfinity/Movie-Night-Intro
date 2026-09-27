@@ -89,6 +89,17 @@ export function createSlideFrame(
   }
 }
 
+/** The untouched first slide a new group starts with — replaced rather than kept when a
+ * quick build adds real slides. */
+export function isPristineDefaultFrame(frame: SlideFrame): boolean {
+  return (
+    frame.content === 'text' &&
+    frame.title === 'New Announcement' &&
+    frame.subtitleOptions.every((s) => !s.trim()) &&
+    !frame.backgroundImage
+  )
+}
+
 export function createSlideshowItem(): SlideshowItem {
   return {
     id: uuid(),

@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type {
+  AiPromptSettings,
   CountdownConfig,
   ImportedMediaFile,
   MediaKind,
@@ -13,6 +14,14 @@ import type {
 /** Sentinel selectedItemId value meaning "the countdown overlay settings are selected"
  * (the countdown is a project-level setting, not a playlist item). */
 export const COUNTDOWN_SELECTION_ID = '__countdown__'
+
+/** One slide's worth of an imported AI reply: add `lines` to slide `frameId`, or create a
+ * new slide titled `title` when frameId is absent. */
+export interface SubtitlePlanEntry {
+  frameId?: string
+  title: string
+  lines: string[]
+}
 
 export interface ProjectState {
   dir: string | null
@@ -79,6 +88,9 @@ export interface ProjectContextValue {
   /** Appends the clipboard slide to a group; returns its id. */
   pasteFrame: (itemId: string) => string | null
   dismissMissingMedia: () => void
+  /** Applies a reviewed subtitle import as one undo step; returns ids of new slides. */
+  applySubtitlePlan: (itemId: string, plan: SubtitlePlanEntry[]) => string[]
+  updateAiPrompt: (patch: Partial<AiPromptSettings>) => void
 }
 
 export const ProjectContext = createContext<ProjectContextValue | null>(null)

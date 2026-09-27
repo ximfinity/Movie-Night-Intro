@@ -32,6 +32,8 @@ import { autoGroupName, frameLabel } from '../../lib/itemMeta'
 import TransitionSelect from './TransitionSelect'
 import ThemeSwatches from './ThemeSwatches'
 import SlidePreview from './SlidePreview'
+import AiSubtitlesDialog from './AiSubtitlesDialog'
+import { usePromptCopier } from '../../hooks/usePromptCopier'
 
 const ANIMATIONS: { value: TextAnimation; label: string }[] = [
   { value: 'fade-up', label: 'Fade up' },
@@ -54,6 +56,9 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
   // Everything collapses while dragging so all rows are the same height (a tall open
   // editor makes drop positions jump).
   const [dragging, setDragging] = useState(false)
+  /** Open AI dialog: for the whole group, or for one slide (frameId). */
+  const [aiDialog, setAiDialog] = useState<{ frameId?: string } | null>(null)
+  const aiFrame = aiDialog?.frameId ? item.frames.find((f) => f.id === aiDialog.frameId) : undefined
   const expandedIndex = Math.max(
     0,
     item.frames.findIndex((f) => f.id === expandedId)
@@ -104,6 +109,13 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
         <div className="frames-header">
           <span className="section-label">Slides ({item.frames.length})</span>
           <div className="frames-header-actions">
+            <button
+              className="btn btn-ghost quick-build-btn"
+              onClick={() => setAiDialog({})}
+              title="Add slides from a list of titles, and fill them with silly subtitles from any AI chat"
+            >
+              ✨ Quick build &amp; AI
+            </button>
             <button className="btn btn-ghost" onClick={() => expand(addFrame(item.id, 'text'))}>
               + Text
             </button>
@@ -149,6 +161,7 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
                   expanded={!dragging && frame.id === expanded?.id}
                   onExpand={() => setExpandedId(frame.id)}
                   onDuplicated={expand}
+                  onOpenAi={() => setAiDialog({ frameId: frame.id })}
                   dir={dir!}
                 />
               ))}
@@ -156,6 +169,17 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
           </SortableContext>
         </DndContext>
       </div>
+
+      {aiDialog && (
+        <AiSubtitlesDialog
+          item={item}
+          frame={aiFrame}
+          onClose={() => setAiDialog(null)}
+          onApplied={(ids) => {
+            if (ids[0]) setExpandedId(ids[0])
+          }}
+        />
+      )}
 
       <div className="slideshow-preview-col">
         {expanded && (
@@ -343,6 +367,7 @@ function FrameCard({
   expanded,
   onExpand,
   onDuplicated,
+  onOpenAi,
   dir
 }: {
   itemId: string
@@ -352,6 +377,7 @@ function FrameCard({
   expanded: boolean
   onExpand: () => void
   onDuplicated: (id: string | null) => void
+  onOpenAi: () => void
   dir: string
 }): React.JSX.Element {
   const { removeFrame, copyFrame } = useProject()
@@ -423,7 +449,9 @@ function FrameCard({
           </button>
         </span>
       </div>
-      {expanded && <FrameEditor itemId={itemId} frame={frame} count={count} dir={dir} />}
+      {expanded && (
+        <FrameEditor itemId={itemId} frame={frame} count={count} dir={dir} onOpenAi={onOpenAi} />
+      )}
     </li>
   )
 }
@@ -432,12 +460,14 @@ function FrameEditor({
   itemId,
   frame,
   count,
-  dir
+  dir,
+  onOpenAi
 }: {
   itemId: string
   frame: SlideFrame
   count: number
   dir: string
+  onOpenAi: () => void
 }): React.JSX.Element {
   const { updateFrame, applyStyleToGroup } = useProject()
 
@@ -472,7 +502,7 @@ function FrameEditor({
               onChange={(e) => patch({ title: e.target.value })}
             />
           </label>
-          <SubtitleEditor frame={frame} patch={patch} />
+          <SubtitleEditor itemId={itemId} frame={frame} patch={patch} onOpenAi={onOpenAi} />
           <ThemeSwatches value={frame.theme} onChange={(theme) => patch({ theme })} />
           <label className="field">
             <span className="field-label">Text animation</span>
@@ -526,12 +556,20 @@ function FrameEditor({
 }
 
 function SubtitleEditor({
+  itemId,
   frame,
-  patch
+  patch,
+  onOpenAi
 }: {
+  itemId: string
   frame: SlideFrame
   patch: (p: Partial<SlideFrame>) => void
+  onOpenAi: () => void
 }): React.JSX.Element {
+  const { project } = useProject()
+  const copyPrompt = usePromptCopier()
+  const [copied, setCopied] = useState(false)
+  const item = project!.items.find((it) => it.id === itemId)
   const options = frame.subtitleOptions
   return (
     <div className="field">
@@ -576,6 +614,26 @@ function SubtitleEditor({
           onClick={() => patch({ subtitleOptions: [...options, ''] })}
         >
           + Add variation
+        </button>
+        <button
+          className="btn btn-ghost"
+          disabled={!frame.title.trim() || item?.type !== 'slideshow'}
+          title="Copy a ready-made prompt for this title — paste it into any AI chat"
+          onClick={() => {
+            if (item?.type !== 'slideshow') return
+            copyPrompt(item, frame)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 3000)
+          }}
+        >
+          {copied ? '✓ Prompt copied' : '📋 Copy AI prompt'}
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onOpenAi}
+          title="Paste an AI chat's reply (or any list of lines) as variations"
+        >
+          📥 Paste AI reply
         </button>
       </div>
     </div>

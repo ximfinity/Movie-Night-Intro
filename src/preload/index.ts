@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { clipboard, contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type {
   ImportedMediaFile,
@@ -27,6 +27,7 @@ const api = {
   checkMediaExists: (dir: string, refs: MediaRef[]): Promise<MediaRef[]> =>
     ipcRenderer.invoke('media:checkExists', dir, refs),
   setFullscreen: (flag: boolean): Promise<void> => ipcRenderer.invoke('app:setFullscreen', flag),
+  copyText: (text: string): void => clipboard.writeText(text),
   setDirty: (flag: boolean): void => ipcRenderer.send('app:setDirty', flag),
   closeWindow: (): void => ipcRenderer.send('app:closeWindow'),
   /** Called when the user chose "Save and close" in the window's close prompt. */

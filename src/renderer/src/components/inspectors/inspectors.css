@@ -415,3 +415,136 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.quick-build-btn {
+  color: var(--accent-strong);
+}
+
+.ai-step {
+  margin-bottom: 20px;
+}
+
+.ai-step h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.ai-step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.ai-step-optional {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.ai-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.ai-row .btn {
+  flex-shrink: 0;
+}
+
+.ai-inline-hint {
+  margin: 0;
+}
+
+.ai-copied {
+  color: var(--accent-strong);
+}
+
+.ai-settings {
+  display: grid;
+  grid-template-columns: 2fr 1fr 90px;
+  gap: 10px;
+}
+
+.ai-settings .field {
+  margin-bottom: 0;
+}
+
+.ai-untitled {
+  margin-top: 10px;
+}
+
+.ai-review {
+  margin-top: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background: var(--bg-0);
+}
+
+.ai-review-entry + .ai-review-entry {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.ai-review-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.ai-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.ai-dupes {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.ai-review li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.ai-line-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-line-removed .ai-line-text {
+  text-decoration: line-through;
+  color: var(--text-2);
+}
+
+.ai-line-long {
+  font-size: 11px;
+  color: var(--accent);
+  white-space: nowrap;
+}

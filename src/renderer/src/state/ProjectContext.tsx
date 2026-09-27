@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { v4 as uuid } from 'uuid'
 import type {
+  AiPromptSettings,
   CountdownConfig,
   ImportedMediaFile,
   MediaKind,
@@ -15,12 +16,18 @@ import {
   cloneSlideshowItem,
   createEmptyProject,
   createSlideFrame,
+  isPristineDefaultFrame,
   slideStyleOf
 } from '@shared/factory'
 import { collectMediaRefs, normalizeProject } from '@shared/projectFormat'
 import { libraryKey } from '@shared/paths'
 import { userMessage } from '../lib/errors'
-import { ProjectContext, type ProjectContextValue, type ProjectState } from './context'
+import {
+  ProjectContext,
+  type ProjectContextValue,
+  type ProjectState,
+  type SubtitlePlanEntry
+} from './context'
 
 const HISTORY_LIMIT = 100
 /** Edits to the same field closer together than this collapse into one undo step. */
@@ -434,6 +441,50 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     [mutateFrames]
   )
 
+  /** Adds reviewed subtitle lines to existing slides and creates new slides (in the group's
+   * current look) for new titles — all as one undo step. Returns the new slides' ids. */
+  const applySubtitlePlan = useCallback(
+    (itemId: string, plan: SubtitlePlanEntry[]): string[] => {
+      const created = plan.filter((e) => !e.frameId).map(() => uuid())
+      mutateFrames(itemId, (frames) => {
+        const additions = new Map(plan.filter((e) => e.frameId).map((e) => [e.frameId!, e.lines]))
+        const updated = frames.map((f) => {
+          const lines = additions.get(f.id)
+          if (!lines || lines.length === 0) return f
+          const kept = f.subtitleOptions.filter((o) => o.trim())
+          return { ...f, subtitleOptions: [...kept, ...lines] }
+        })
+        const last = updated[updated.length - 1]
+        const style = last ? slideStyleOf(last) : undefined
+        const newFrames = plan
+          .filter((e) => !e.frameId)
+          .map((e, i) => ({
+            ...createSlideFrame('text', style, e.title),
+            id: created[i],
+            subtitleOptions: e.lines.length > 0 ? e.lines : ['']
+          }))
+        // A brand-new group's untouched placeholder slide gives way to the real ones.
+        const base =
+          newFrames.length > 0 && updated.length === 1 && isPristineDefaultFrame(updated[0])
+            ? []
+            : updated
+        return [...base, ...newFrames]
+      })
+      return created
+    },
+    [mutateFrames]
+  )
+
+  const updateAiPrompt = useCallback(
+    (patch: Partial<AiPromptSettings>) => {
+      commit(
+        (p) => ({ ...p, aiPrompt: { ...p.aiPrompt, ...patch } }),
+        `aiPrompt:${Object.keys(patch).sort().join(',')}`
+      )
+    },
+    [commit]
+  )
+
   const value = useMemo<ProjectContextValue>(
     () => ({
       dir: state.dir,
@@ -467,7 +518,9 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       applyStyleToGroup,
       copyFrame,
       pasteFrame,
-      dismissMissingMedia
+      dismissMissingMedia,
+      applySubtitlePlan,
+      updateAiPrompt
     }),
     [
       state,
@@ -494,7 +547,9 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       applyStyleToGroup,
       copyFrame,
       pasteFrame,
-      dismissMissingMedia
+      dismissMissingMedia,
+      applySubtitlePlan,
+      updateAiPrompt
     ]
   )
 
