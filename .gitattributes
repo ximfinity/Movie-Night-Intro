@@ -1,0 +1,6 @@
+# Keep LF line endings on every platform (matches .editorconfig and Prettier), so
+# lint output on Windows CI is not flooded with line-ending warnings.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary
