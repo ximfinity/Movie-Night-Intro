@@ -59,7 +59,9 @@ export default function SortableItemCard({
           title="Delete"
           onClick={(e) => {
             e.stopPropagation()
-            removeItem(item.id)
+            if (window.confirm(`Delete "${itemTitle(item)}"?\n\nYou can undo this with Ctrl+Z.`)) {
+              removeItem(item.id)
+            }
           }}
         >
           ✕

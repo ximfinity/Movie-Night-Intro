@@ -16,27 +16,51 @@ export const COUNTDOWN_SELECTION_ID = '__countdown__'
 
 export interface ProjectState {
   dir: string | null
+  /** The JSON file this project was opened from (saves go back to it). */
+  fileName: string
   project: ProjectData | null
+  /** The project exactly as last saved or loaded; there are unsaved changes whenever the
+   * current project is a different object (so undoing back to it clears "unsaved"). */
+  savedProject: ProjectData | null
   selectedItemId: string | null
-  dirty: boolean
   /** In-memory clipboard for reusing a slide frame across slideshow items; never saved. */
   copiedFrame: SlideFrame | null
   /** Media files the open project refers to that couldn't be found on disk, detected on
    * open; never saved. Cleared when the banner showing them is dismissed. */
   missingMedia: MediaRef[]
+  /** Undo/redo history of whole-project snapshots (cheap: edits are immutable updates). */
+  past: ProjectData[]
+  future: ProjectData[]
+  /** Lets rapid edits to the same field (typing, dragging a slider) share one undo step. */
+  lastEdit: { key: string | null; at: number }
+  /** Shown as a blocking overlay while a slow operation (copying media) runs. */
+  busyMessage: string | null
 }
 
-export interface ProjectContextValue extends ProjectState {
+export interface ProjectContextValue {
+  dir: string | null
+  project: ProjectData | null
+  selectedItemId: string | null
+  copiedFrame: SlideFrame | null
+  missingMedia: MediaRef[]
+  busyMessage: string | null
+  dirty: boolean
+  canUndo: boolean
+  canRedo: boolean
   startNewProject: () => Promise<void>
   openProject: () => Promise<void>
-  saveProject: () => Promise<void>
+  /** Resolves true once the project is safely on disk; shows the error and resolves false
+   * otherwise. */
+  saveProject: () => Promise<boolean>
+  closeProject: () => void
+  undo: () => void
+  redo: () => void
   addItem: (item: PlaylistItem) => void
   updateItem: (id: string, patch: Partial<PlaylistItem>) => void
   removeItem: (id: string) => void
   duplicateItem: (id: string) => void
   reorderItems: (fromIndex: number, toIndex: number) => void
   selectItem: (id: string | null) => void
-  closeProject: () => void
   updateCountdown: (patch: Partial<CountdownConfig>) => void
   importToLibrary: (kind: MediaKind) => Promise<ImportedMediaFile[]>
   removeFromLibrary: (kind: MediaKind, fileName: string) => void

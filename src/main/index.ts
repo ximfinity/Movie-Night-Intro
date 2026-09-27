@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join, basename, extname, dirname } from 'path'
+import { join, basename, dirname, extname } from 'path'
 import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -8,23 +8,41 @@ import type {
   ImportedMediaFile,
   MediaKind,
   MediaRef,
-  OpenProjectResult,
-  ProjectData
+  NewProjectChoice,
+  OpenProjectResult
 } from '../shared/types'
+import { PROJECT_FILE_NAME } from '../shared/types'
+import { mediaRelPath } from '../shared/paths'
 
 let mainWindow: BrowserWindow | null = null
+/** Mirrors the editor's "unsaved changes" state so closing the window can ask first. */
+let rendererDirty = false
+let forceClose = false
 
-const MEDIA_SUBDIR: Record<MediaKind, string> = {
-  video: 'media/videos',
-  audio: 'media/audio',
-  image: 'media/images'
-}
+const MEDIA_KINDS: MediaKind[] = ['video', 'audio', 'image']
 
 const MEDIA_FILTERS: Record<MediaKind, Electron.FileFilter[]> = {
   // No .avi: Chromium can't decode it, so it would only ever be skipped at show time.
   video: [{ name: 'Video files', extensions: ['mp4', 'webm', 'mov', 'mkv', 'm4v'] }],
   audio: [{ name: 'Audio files', extensions: ['mp3', 'm4a', 'wav', 'ogg', 'aac', 'flac'] }],
   image: [{ name: 'Image files', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }]
+}
+
+/** Rejects anything that isn't a plain file name, so values coming from the renderer (or a
+ * hand-edited project file) can't reach outside the project folder. */
+function isPlainFileName(name: unknown): name is string {
+  return (
+    typeof name === 'string' &&
+    name.length > 0 &&
+    name !== '.' &&
+    name !== '..' &&
+    !/[\\/]/.test(name) &&
+    basename(name) === name
+  )
+}
+
+function assertKind(kind: unknown): asserts kind is MediaKind {
+  if (!MEDIA_KINDS.includes(kind as MediaKind)) throw new Error(`Unknown media kind: ${kind}`)
 }
 
 function createWindow(): void {
@@ -45,8 +63,29 @@ function createWindow(): void {
     mainWindow?.show()
   })
 
+  mainWindow.on('close', (e) => {
+    if (forceClose || !rendererDirty || !mainWindow) return
+    e.preventDefault()
+    dialog
+      .showMessageBox(mainWindow, {
+        type: 'warning',
+        buttons: ['Save and close', "Don't save", 'Cancel'],
+        defaultId: 0,
+        cancelId: 2,
+        message: 'You have unsaved changes.',
+        detail: 'Save them before closing?'
+      })
+      .then(({ response }) => {
+        if (response === 0) mainWindow?.webContents.send('app:saveAndClose')
+        else if (response === 1) {
+          forceClose = true
+          mainWindow?.close()
+        }
+      })
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (details.url.startsWith('https://')) shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
@@ -58,12 +97,12 @@ function createWindow(): void {
 }
 
 async function ensureProjectFolders(dir: string): Promise<void> {
-  await fs.mkdir(join(dir, 'media/videos'), { recursive: true })
-  await fs.mkdir(join(dir, 'media/audio'), { recursive: true })
-  await fs.mkdir(join(dir, 'media/images'), { recursive: true })
+  for (const kind of MEDIA_KINDS) {
+    await fs.mkdir(join(dir, mediaRelPath(kind, '')), { recursive: true })
+  }
 }
 
-async function uniqueDestPath(dir: string, fileName: string): Promise<string> {
+async function uniqueDestName(dir: string, fileName: string): Promise<string> {
   const ext = extname(fileName)
   const base = basename(fileName, ext)
   let candidate = fileName
@@ -75,8 +114,40 @@ async function uniqueDestPath(dir: string, fileName: string): Promise<string> {
   return candidate
 }
 
+async function readProjectFile(dir: string, fileName: string): Promise<OpenProjectResult> {
+  const raw = await fs.readFile(join(dir, fileName), 'utf-8')
+  let project: unknown
+  try {
+    project = JSON.parse(raw)
+  } catch {
+    const bak = existsSync(join(dir, `${fileName}.bak`))
+      ? ` A backup of the previous save is next to it as "${fileName}.bak" — rename it to "${fileName}" to recover.`
+      : ''
+    throw new Error(`"${fileName}" isn't valid project data; it may be damaged.${bak}`)
+  }
+  await ensureProjectFolders(dir)
+  return { dir, fileName, project }
+}
+
+/** Crash-safe save: write a temp file, keep the previous version as .bak, then swap the new
+ * file into place, so a crash or power cut mid-save can't leave a truncated project. */
+async function writeProjectFile(dir: string, fileName: string, data: unknown): Promise<void> {
+  const target = join(dir, fileName)
+  const tmp = `${target}.tmp`
+  await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8')
+  if (existsSync(target)) await fs.copyFile(target, `${target}.bak`)
+  try {
+    await fs.rename(tmp, target)
+  } catch (err) {
+    // Windows can briefly lock a file (antivirus, indexer); one retry covers that.
+    if ((err as NodeJS.ErrnoException).code !== 'EPERM') throw err
+    await new Promise((r) => setTimeout(r, 150))
+    await fs.rename(tmp, target)
+  }
+}
+
 function registerIpcHandlers(): void {
-  ipcMain.handle('project:selectNewFolder', async () => {
+  ipcMain.handle('project:selectNewFolder', async (): Promise<NewProjectChoice | null> => {
     if (!mainWindow) return null
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Choose or create a folder for your project',
@@ -84,8 +155,22 @@ function registerIpcHandlers(): void {
     })
     if (result.canceled || result.filePaths.length === 0) return null
     const dir = result.filePaths[0]
+    if (existsSync(join(dir, PROJECT_FILE_NAME))) {
+      const { response } = await dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        buttons: ['Open that project', 'Start over and replace it', 'Cancel'],
+        defaultId: 0,
+        cancelId: 2,
+        message: 'This folder already has a Movie Night project.',
+        detail:
+          'Open it to keep working on it, or start over with an empty project (the old one is kept as project.json.bak).'
+      })
+      if (response === 2) return null
+      if (response === 0)
+        return { kind: 'open', ...(await readProjectFile(dir, PROJECT_FILE_NAME)) }
+    }
     await ensureProjectFolders(dir)
-    return dir
+    return { kind: 'new', dir }
   })
 
   ipcMain.handle('project:openExisting', async (): Promise<OpenProjectResult | null> => {
@@ -97,53 +182,79 @@ function registerIpcHandlers(): void {
     })
     if (result.canceled || result.filePaths.length === 0) return null
     const filePath = result.filePaths[0]
-    const dir = dirname(filePath)
-    const raw = await fs.readFile(filePath, 'utf-8')
-    const project = JSON.parse(raw) as ProjectData
-    await ensureProjectFolders(dir)
-    return { dir, project }
+    return readProjectFile(dirname(filePath), basename(filePath))
   })
 
-  ipcMain.handle('project:save', async (_evt, dir: string, project: ProjectData) => {
+  ipcMain.handle('project:save', async (_evt, dir: string, fileName: string, project: unknown) => {
+    if (!isPlainFileName(fileName) || !fileName.endsWith('.json')) {
+      throw new Error(`Refusing to save to "${fileName}".`)
+    }
     await ensureProjectFolders(dir)
-    await fs.writeFile(join(dir, 'project.json'), JSON.stringify(project, null, 2), 'utf-8')
+    await writeProjectFile(dir, fileName, project)
+  })
+
+  ipcMain.handle('media:pickFiles', async (_evt, kind: MediaKind): Promise<string[]> => {
+    assertKind(kind)
+    if (!mainWindow) return []
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: `Import ${kind} files`,
+      properties: ['openFile', 'multiSelections'],
+      filters: MEDIA_FILTERS[kind]
+    })
+    return result.canceled ? [] : result.filePaths
   })
 
   ipcMain.handle(
-    'media:import',
-    async (_evt, dir: string, kind: MediaKind): Promise<ImportedMediaFile[]> => {
-      if (!mainWindow) return []
-      const result = await dialog.showOpenDialog(mainWindow, {
-        title: `Import ${kind} files`,
-        properties: ['openFile', 'multiSelections'],
-        filters: MEDIA_FILTERS[kind]
-      })
-      if (result.canceled || result.filePaths.length === 0) return []
-
-      const destDir = join(dir, MEDIA_SUBDIR[kind])
+    'media:copyIntoProject',
+    async (
+      _evt,
+      dir: string,
+      kind: MediaKind,
+      srcPaths: string[]
+    ): Promise<{ imported: ImportedMediaFile[]; failed: { name: string; error: string }[] }> => {
+      assertKind(kind)
+      const destDir = join(dir, mediaRelPath(kind, ''))
       await fs.mkdir(destDir, { recursive: true })
-
       const imported: ImportedMediaFile[] = []
-      for (const srcPath of result.filePaths) {
+      const failed: { name: string; error: string }[] = []
+      for (const srcPath of srcPaths) {
         const original = basename(srcPath)
-        const destName = await uniqueDestPath(destDir, original)
-        await fs.copyFile(srcPath, join(destDir, destName))
-        imported.push({ fileName: destName, displayName: original })
+        try {
+          const destName = await uniqueDestName(destDir, original)
+          await fs.copyFile(srcPath, join(destDir, destName))
+          imported.push({ fileName: destName, displayName: original })
+        } catch (err) {
+          failed.push({ name: original, error: (err as Error).message })
+        }
       }
-      return imported
+      return { imported, failed }
     }
   )
 
   ipcMain.handle(
     'media:checkExists',
     async (_evt, dir: string, refs: MediaRef[]): Promise<MediaRef[]> => {
-      return refs.filter((ref) => !existsSync(join(dir, MEDIA_SUBDIR[ref.kind], ref.fileName)))
+      return refs.filter(
+        (ref) =>
+          !MEDIA_KINDS.includes(ref.kind) ||
+          !isPlainFileName(ref.fileName) ||
+          !existsSync(join(dir, mediaRelPath(ref.kind, ref.fileName)))
+      )
     }
   )
 
   ipcMain.handle('app:setFullscreen', async (_evt, flag: boolean) => {
     mainWindow?.setFullScreen(flag)
     if (flag) mainWindow?.setMenuBarVisibility(false)
+  })
+
+  ipcMain.on('app:setDirty', (_evt, flag: boolean) => {
+    rendererDirty = flag === true
+  })
+
+  ipcMain.on('app:closeWindow', () => {
+    forceClose = true
+    mainWindow?.close()
   })
 }
 

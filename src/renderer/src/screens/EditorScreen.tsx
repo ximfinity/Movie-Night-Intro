@@ -17,19 +17,37 @@ export default function EditorScreen({
     closeProject,
     missingMedia,
     dismissMissingMedia,
-    selectedItemId
+    selectedItemId,
+    busyMessage,
+    undo,
+    redo,
+    canUndo,
+    canRedo
   } = useProject()
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      if (!(e.ctrlKey || e.metaKey)) return
+      const key = e.key.toLowerCase()
+      if (key === 's') {
         e.preventDefault()
         saveProject()
+        return
+      }
+      // Leave undo inside text fields to the field itself (native text undo).
+      const target = e.target as HTMLElement | null
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault()
+        redo()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [saveProject])
+  }, [saveProject, undo, redo])
 
   if (!project) return <></>
 
@@ -60,6 +78,24 @@ export default function EditorScreen({
           </div>
         </div>
         <div className="editor-header-right">
+          <button
+            className="btn btn-ghost icon-btn"
+            onClick={undo}
+            disabled={!canUndo}
+            title="Undo (Ctrl+Z)"
+            aria-label="Undo"
+          >
+            ↶
+          </button>
+          <button
+            className="btn btn-ghost icon-btn"
+            onClick={redo}
+            disabled={!canRedo}
+            title="Redo (Ctrl+Y)"
+            aria-label="Redo"
+          >
+            ↷
+          </button>
           <button className="btn" onClick={saveProject} disabled={!dirty}>
             Save
           </button>
@@ -98,6 +134,14 @@ export default function EditorScreen({
         <PlaylistPanel />
         <InspectorPanel />
       </div>
+      {busyMessage && (
+        <div className="busy-overlay" role="status">
+          <div className="busy-card">
+            <span className="busy-spinner" />
+            {busyMessage}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

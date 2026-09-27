@@ -1,196 +1,188 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { v4 as uuid } from 'uuid'
 import type {
   CountdownConfig,
   ImportedMediaFile,
   MediaKind,
-  MediaRef,
+  OpenProjectResult,
   PlaylistItem,
   ProjectData,
   SlideFrame,
-  SlideFrameContent,
-  SlideMusic,
-  SlideshowItem
+  SlideFrameContent
 } from '@shared/types'
-import {
-  createDefaultCountdown,
-  createEmptyLibrary,
-  createEmptyProject,
-  createSlideFrame
-} from '@shared/factory'
+import { PROJECT_FILE_NAME } from '@shared/types'
+import { cloneSlideshowItem, createEmptyProject, createSlideFrame } from '@shared/factory'
+import { collectMediaRefs, normalizeProject } from '@shared/projectFormat'
 import { libraryKey } from '@shared/paths'
+import { userMessage } from '../lib/errors'
 import { ProjectContext, type ProjectContextValue, type ProjectState } from './context'
 
-/** Backfills a slide frame's fields, including converting the old single-string
- * `subtitle` (pre-random-variants) into `subtitleOptions`. */
-function normalizeSlideFrame(raw: Record<string, unknown>): SlideFrame {
-  const subtitleOptions = Array.isArray(raw.subtitleOptions)
-    ? (raw.subtitleOptions as string[])
-    : typeof raw.subtitle === 'string' && raw.subtitle
-      ? [raw.subtitle as string]
-      : ['']
-  return {
-    id: (raw.id as string) ?? uuid(),
-    content: (raw.content as SlideFrameContent) ?? 'text',
-    title: (raw.title as string) ?? '',
-    subtitleOptions,
-    theme: (raw.theme as SlideFrame['theme']) ?? 'midnight',
-    textAnimation: (raw.textAnimation as SlideFrame['textAnimation']) ?? 'fade-up',
-    backgroundImage: (raw.backgroundImage as string | null) ?? null,
-    backgroundImageDisplayName: (raw.backgroundImageDisplayName as string | null) ?? null,
-    durationSec: (raw.durationSec as number) ?? 6
-  }
+const HISTORY_LIMIT = 100
+/** Edits to the same field closer together than this collapse into one undo step. */
+const COALESCE_MS = 1000
+
+const EMPTY_STATE: ProjectState = {
+  dir: null,
+  fileName: PROJECT_FILE_NAME,
+  project: null,
+  savedProject: null,
+  selectedItemId: null,
+  copiedFrame: null,
+  missingMedia: [],
+  past: [],
+  future: [],
+  lastEdit: { key: null, at: 0 },
+  busyMessage: null
 }
 
-/** Backfills a slideshow's music config, including the 'kind'/'position' fields added
- * when pop-up-video music was introduced. */
-function normalizeSlideMusic(raw: unknown): SlideMusic | null {
-  if (!raw || typeof raw !== 'object') return null
-  const r = raw as Record<string, unknown>
-  return {
-    kind: r.kind === 'video' ? 'video' : 'audio',
-    fileName: r.fileName as string,
-    displayName: r.displayName as string,
-    volume: (r.volume as number) ?? 0.8,
-    fadeInSec: (r.fadeInSec as number) ?? 1.5,
-    fadeOutSec: (r.fadeOutSec as number) ?? 1.5,
-    position: (r.position as SlideMusic['position']) ?? 'bottom-left',
-    sizeScale: (r.sizeScale as number) ?? 3,
-    loopSlidesUntilEnd: (r.loopSlidesUntilEnd as boolean) ?? false
-  }
-}
-
-/** Converts the old single-content "slide" item shape (pre-slideshow, one frame with its
- * own music) into a one-frame SlideshowItem, so projects saved before that change still
- * open with their content intact. */
-function migrateLegacySlide(raw: Record<string, unknown>): SlideshowItem {
-  return {
-    id: raw.id as string,
-    type: 'slideshow',
-    transition: (raw.transition as SlideshowItem['transition']) ?? 'crossfade',
-    frames: [normalizeSlideFrame(raw)],
-    music: normalizeSlideMusic(raw.music)
-  }
-}
-
-/** Backfills fields that may be missing from a project saved by an older version of the
- * app, and migrates/drops playlist item shapes that no longer exist. */
-function normalizeProject(project: ProjectData): ProjectData {
-  const rawItems = project.items as unknown as Array<Record<string, unknown>>
-  const items = rawItems
-    .map((raw): PlaylistItem | null => {
-      if (raw.type === 'video') return raw as unknown as PlaylistItem
-      if (raw.type === 'slideshow') {
-        const rawFrames = (raw.frames as Array<Record<string, unknown>>) ?? []
-        return {
-          id: raw.id as string,
-          type: 'slideshow',
-          transition: (raw.transition as SlideshowItem['transition']) ?? 'crossfade',
-          frames: rawFrames.map(normalizeSlideFrame),
-          music: normalizeSlideMusic(raw.music)
-        }
-      }
-      if (raw.type === 'slide') return migrateLegacySlide(raw)
-      return null
-    })
-    .filter((it): it is PlaylistItem => it !== null)
-
-  return {
-    ...project,
-    items,
-    countdown: { ...createDefaultCountdown(), ...project.countdown },
-    library: project.library ?? createEmptyLibrary()
-  }
-}
-
-/** Every media file a project refers to (library entries plus anything used directly by
- * an item), deduped by kind+fileName, for checking which are still present on disk. */
-function collectMediaRefs(project: ProjectData): MediaRef[] {
-  const refs: MediaRef[] = []
-  const seen = new Set<string>()
-  function add(kind: MediaKind, fileName: string | null, displayName?: string | null): void {
-    if (!fileName || seen.has(`${kind}:${fileName}`)) return
-    seen.add(`${kind}:${fileName}`)
-    refs.push({ kind, fileName, displayName: displayName || fileName })
-  }
-  project.library.videos.forEach((f) => add('video', f.fileName, f.displayName))
-  project.library.audio.forEach((f) => add('audio', f.fileName, f.displayName))
-  project.library.images.forEach((f) => add('image', f.fileName, f.displayName))
-  for (const item of project.items) {
-    if (item.type === 'video') {
-      add('video', item.fileName, item.displayName)
-    } else {
-      if (item.music) add(item.music.kind, item.music.fileName, item.music.displayName)
-      for (const frame of item.frames) {
-        add('image', frame.backgroundImage, frame.backgroundImageDisplayName)
-      }
-    }
-  }
-  return refs
+function loadedState(dir: string, fileName: string, project: ProjectData): ProjectState {
+  return { ...EMPTY_STATE, dir, fileName, project, savedProject: project }
 }
 
 export function ProjectProvider({ children }: { children: ReactNode }): React.JSX.Element {
-  const [state, setState] = useState<ProjectState>({
-    dir: null,
-    project: null,
-    selectedItemId: null,
-    dirty: false,
-    copiedFrame: null,
-    missingMedia: []
+  const [state, setState] = useState<ProjectState>(EMPTY_STATE)
+  /** Latest committed state, for async actions that must read it after awaiting. */
+  const stateRef = useRef(state)
+  useEffect(() => {
+    stateRef.current = state
   })
 
-  const startNewProject = useCallback(async () => {
-    const dir = await window.api.selectNewProjectFolder()
-    if (!dir) return
-    const name = dir.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'Movie Night'
-    const project = createEmptyProject(name)
-    setState({
-      dir,
-      project,
-      selectedItemId: null,
-      dirty: true,
-      copiedFrame: null,
-      missingMedia: []
-    })
-    await window.api.saveProject(dir, project)
-    setState((s) => ({ ...s, dirty: false }))
-  }, [])
+  const dirty = state.project !== null && state.project !== state.savedProject
 
-  const openProject = useCallback(async () => {
-    const result = await window.api.openExistingProject()
-    if (!result) return
-    const project = normalizeProject(result.project)
-    setState({
-      dir: result.dir,
-      project,
-      selectedItemId: null,
-      dirty: false,
-      copiedFrame: null,
-      missingMedia: []
-    })
-    const missing = await window.api.checkMediaExists(result.dir, collectMediaRefs(project))
-    if (missing.length > 0) setState((s) => ({ ...s, missingMedia: missing }))
-  }, [])
+  useEffect(() => {
+    window.api.setDirty(dirty)
+  }, [dirty])
 
-  const saveProject = useCallback(async () => {
-    setState((s) => {
-      if (!s.dir || !s.project) return s
-      const updated: ProjectData = { ...s.project, updatedAt: new Date().toISOString() }
-      window.api.saveProject(s.dir, updated)
-      return { ...s, project: updated, dirty: false }
-    })
-  }, [])
-
-  const mutateItems = useCallback((updater: (items: PlaylistItem[]) => PlaylistItem[]) => {
+  /** Applies an undoable change to the project. `coalesceKey` identifies the thing being
+   * edited, so a burst of edits to it (keystrokes, slider drags) becomes one undo step. */
+  const commit = useCallback((updater: (p: ProjectData) => ProjectData, coalesceKey?: string) => {
     setState((s) => {
       if (!s.project) return s
+      const next = updater(s.project)
+      if (next === s.project) return s
+      const now = Date.now()
+      const coalesce =
+        coalesceKey !== undefined &&
+        s.lastEdit.key === coalesceKey &&
+        now - s.lastEdit.at < COALESCE_MS
       return {
         ...s,
-        project: { ...s.project, items: updater(s.project.items) },
-        dirty: true
+        project: next,
+        past: coalesce ? s.past : [...s.past, s.project].slice(-HISTORY_LIMIT),
+        future: [],
+        lastEdit: { key: coalesceKey ?? null, at: now }
       }
     })
   }, [])
+
+  const undo = useCallback(() => {
+    setState((s) => {
+      if (!s.project || s.past.length === 0) return s
+      return {
+        ...s,
+        project: s.past[s.past.length - 1],
+        past: s.past.slice(0, -1),
+        future: [s.project, ...s.future].slice(0, HISTORY_LIMIT),
+        lastEdit: { key: null, at: 0 }
+      }
+    })
+  }, [])
+
+  const redo = useCallback(() => {
+    setState((s) => {
+      if (!s.project || s.future.length === 0) return s
+      return {
+        ...s,
+        project: s.future[0],
+        past: [...s.past, s.project].slice(-HISTORY_LIMIT),
+        future: s.future.slice(1),
+        lastEdit: { key: null, at: 0 }
+      }
+    })
+  }, [])
+
+  const finishOpening = useCallback(async (result: OpenProjectResult) => {
+    let project: ProjectData
+    try {
+      project = normalizeProject(result.project)
+    } catch (err) {
+      window.alert(userMessage(err))
+      return
+    }
+    setState(loadedState(result.dir, result.fileName, project))
+    try {
+      const missing = await window.api.checkMediaExists(result.dir, collectMediaRefs(project))
+      if (missing.length > 0) {
+        setState((s) => (s.project === project ? { ...s, missingMedia: missing } : s))
+      }
+    } catch (err) {
+      console.warn('Could not check for missing media:', err)
+    }
+  }, [])
+
+  const startNewProject = useCallback(async () => {
+    try {
+      const choice = await window.api.selectNewProjectFolder()
+      if (!choice) return
+      if (choice.kind === 'open') {
+        await finishOpening(choice)
+        return
+      }
+      const name = choice.dir.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'Movie Night'
+      const project = createEmptyProject(name)
+      await window.api.saveProject(choice.dir, PROJECT_FILE_NAME, project)
+      setState(loadedState(choice.dir, PROJECT_FILE_NAME, project))
+    } catch (err) {
+      window.alert(`Couldn't create the project.\n\n${userMessage(err)}`)
+    }
+  }, [finishOpening])
+
+  const openProject = useCallback(async () => {
+    try {
+      const result = await window.api.openExistingProject()
+      if (result) await finishOpening(result)
+    } catch (err) {
+      window.alert(`Couldn't open that project.\n\n${userMessage(err)}`)
+    }
+  }, [finishOpening])
+
+  const saveProject = useCallback(async (): Promise<boolean> => {
+    const { dir, fileName, project } = stateRef.current
+    if (!dir || !project) return false
+    try {
+      await window.api.saveProject(dir, fileName, {
+        ...project,
+        updatedAt: new Date().toISOString()
+      })
+    } catch (err) {
+      window.alert(
+        `Couldn't save the project — your changes are NOT saved yet.\n\n${userMessage(err)}`
+      )
+      return false
+    }
+    // Edits made while the save was in flight stay unsaved, because `project` moved on.
+    setState((s) => (s.dir === dir ? { ...s, savedProject: project } : s))
+    return true
+  }, [])
+
+  useEffect(
+    () =>
+      window.api.onSaveAndCloseRequest(async () => {
+        if (await saveProject()) window.api.closeWindow()
+      }),
+    [saveProject]
+  )
+
+  const closeProject = useCallback(() => {
+    setState(EMPTY_STATE)
+  }, [])
+
+  const mutateItems = useCallback(
+    (updater: (items: PlaylistItem[]) => PlaylistItem[], coalesceKey?: string) => {
+      commit((p) => ({ ...p, items: updater(p.items) }), coalesceKey)
+    },
+    [commit]
+  )
 
   const addItem = useCallback(
     (item: PlaylistItem) => {
@@ -202,8 +194,9 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
 
   const updateItem = useCallback(
     (id: string, patch: Partial<PlaylistItem>) => {
-      mutateItems((items) =>
-        items.map((it) => (it.id === id ? ({ ...it, ...patch } as PlaylistItem) : it))
+      mutateItems(
+        (items) => items.map((it) => (it.id === id ? ({ ...it, ...patch } as PlaylistItem) : it)),
+        `item:${id}:${Object.keys(patch).sort().join(',')}`
       )
     },
     [mutateItems]
@@ -222,7 +215,9 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       mutateItems((items) => {
         const idx = items.findIndex((it) => it.id === id)
         if (idx === -1) return items
-        const clone: PlaylistItem = { ...items[idx], id: crypto.randomUUID() }
+        const original = items[idx]
+        const clone: PlaylistItem =
+          original.type === 'slideshow' ? cloneSlideshowItem(original) : { ...original, id: uuid() }
         const next = [...items]
         next.splice(idx + 1, 0, clone)
         return next
@@ -247,80 +242,79 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     setState((s) => ({ ...s, selectedItemId: id }))
   }, [])
 
-  const closeProject = useCallback(() => {
-    setState({
-      dir: null,
-      project: null,
-      selectedItemId: null,
-      dirty: false,
-      copiedFrame: null,
-      missingMedia: []
-    })
-  }, [])
-
   const dismissMissingMedia = useCallback(() => {
     setState((s) => ({ ...s, missingMedia: [] }))
   }, [])
 
-  const updateCountdown = useCallback((patch: Partial<CountdownConfig>) => {
-    setState((s) => {
-      if (!s.project) return s
-      return {
-        ...s,
-        project: { ...s.project, countdown: { ...s.project.countdown, ...patch } },
-        dirty: true
-      }
-    })
-  }, [])
+  const updateCountdown = useCallback(
+    (patch: Partial<CountdownConfig>) => {
+      commit(
+        (p) => ({ ...p, countdown: { ...p.countdown, ...patch } }),
+        `countdown:${Object.keys(patch).sort().join(',')}`
+      )
+    },
+    [commit]
+  )
 
   const importToLibrary = useCallback(
     async (kind: MediaKind): Promise<ImportedMediaFile[]> => {
-      if (!state.dir) return []
-      const files = await window.api.importMedia(state.dir, kind)
-      if (files.length === 0) return []
-      const key = libraryKey(kind)
-      setState((s) => {
-        if (!s.project) return s
-        const existingNames = new Set(s.project.library[key].map((f) => f.fileName))
-        const merged = [
-          ...s.project.library[key],
-          ...files.filter((f) => !existingNames.has(f.fileName))
-        ]
-        return {
+      const dir = stateRef.current.dir
+      if (!dir) return []
+      let imported: ImportedMediaFile[]
+      try {
+        const paths = await window.api.pickMediaFiles(kind)
+        if (paths.length === 0) return []
+        setState((s) => ({
           ...s,
-          project: { ...s.project, library: { ...s.project.library, [key]: merged } },
-          dirty: true
+          busyMessage: `Copying ${paths.length} file${paths.length === 1 ? '' : 's'} into your project…`
+        }))
+        const result = await window.api.copyMediaIntoProject(dir, kind, paths)
+        imported = result.imported
+        if (result.failed.length > 0) {
+          window.alert(
+            `Some files couldn't be imported:\n\n${result.failed.map((f) => `• ${f.name}: ${f.error}`).join('\n')}`
+          )
         }
+      } catch (err) {
+        window.alert(`Import failed.\n\n${userMessage(err)}`)
+        return []
+      } finally {
+        setState((s) => ({ ...s, busyMessage: null }))
+      }
+      if (imported.length === 0) return []
+      const key = libraryKey(kind)
+      commit((p) => {
+        const existingNames = new Set(p.library[key].map((f) => f.fileName))
+        const merged = [
+          ...p.library[key],
+          ...imported.filter((f) => !existingNames.has(f.fileName))
+        ]
+        return { ...p, library: { ...p.library, [key]: merged } }
       })
-      return files
+      return imported
     },
-    [state.dir]
+    [commit]
   )
 
-  const removeFromLibrary = useCallback((kind: MediaKind, fileName: string) => {
-    const key = libraryKey(kind)
-    setState((s) => {
-      if (!s.project) return s
-      return {
-        ...s,
-        project: {
-          ...s.project,
-          library: {
-            ...s.project.library,
-            [key]: s.project.library[key].filter((f) => f.fileName !== fileName)
-          }
-        },
-        dirty: true
-      }
-    })
-  }, [])
+  const removeFromLibrary = useCallback(
+    (kind: MediaKind, fileName: string) => {
+      const key = libraryKey(kind)
+      commit((p) => ({
+        ...p,
+        library: { ...p.library, [key]: p.library[key].filter((f) => f.fileName !== fileName) }
+      }))
+    },
+    [commit]
+  )
 
   const mutateFrames = useCallback(
-    (itemId: string, updater: (frames: SlideFrame[]) => SlideFrame[]) => {
-      mutateItems((items) =>
-        items.map((it) =>
-          it.id === itemId && it.type === 'slideshow' ? { ...it, frames: updater(it.frames) } : it
-        )
+    (itemId: string, updater: (frames: SlideFrame[]) => SlideFrame[], coalesceKey?: string) => {
+      mutateItems(
+        (items) =>
+          items.map((it) =>
+            it.id === itemId && it.type === 'slideshow' ? { ...it, frames: updater(it.frames) } : it
+          ),
+        coalesceKey
       )
     },
     [mutateItems]
@@ -335,8 +329,10 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
 
   const updateFrame = useCallback(
     (itemId: string, frameId: string, patch: Partial<SlideFrame>) => {
-      mutateFrames(itemId, (frames) =>
-        frames.map((f) => (f.id === frameId ? ({ ...f, ...patch } as SlideFrame) : f))
+      mutateFrames(
+        itemId,
+        (frames) => frames.map((f) => (f.id === frameId ? ({ ...f, ...patch } as SlideFrame) : f)),
+        `frame:${frameId}:${Object.keys(patch).sort().join(',')}`
       )
     },
     [mutateFrames]
@@ -365,53 +361,53 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     [mutateFrames]
   )
 
-  const copyFrame = useCallback((itemId: string, frameId: string) => {
-    setState((s) => {
-      if (!s.project) return s
-      const item = s.project.items.find((it) => it.id === itemId)
-      if (!item || item.type !== 'slideshow') return s
-      const idx = item.frames.findIndex((f) => f.id === frameId)
-      if (idx === -1) return s
-      const original = item.frames[idx]
-      const clone: SlideFrame = { ...original, id: uuid() }
-      const items = s.project.items.map((it) =>
-        it.id === itemId && it.type === 'slideshow'
-          ? { ...it, frames: [...it.frames.slice(0, idx + 1), clone, ...it.frames.slice(idx + 1)] }
-          : it
-      )
-      return {
-        ...s,
-        project: { ...s.project, items },
-        copiedFrame: { ...original },
-        dirty: true
-      }
-    })
-  }, [])
+  const copyFrame = useCallback(
+    (itemId: string, frameId: string) => {
+      const item = stateRef.current.project?.items.find((it) => it.id === itemId)
+      const original = item?.type === 'slideshow' ? item.frames.find((f) => f.id === frameId) : null
+      if (!original) return
+      mutateFrames(itemId, (frames) => {
+        const idx = frames.findIndex((f) => f.id === frameId)
+        const clone: SlideFrame = { ...original, id: uuid() }
+        return [...frames.slice(0, idx + 1), clone, ...frames.slice(idx + 1)]
+      })
+      setState((s) => ({ ...s, copiedFrame: { ...original } }))
+    },
+    [mutateFrames]
+  )
 
-  const pasteFrame = useCallback((itemId: string) => {
-    setState((s) => {
-      if (!s.project || !s.copiedFrame) return s
-      const clone: SlideFrame = { ...s.copiedFrame, id: uuid() }
-      const items = s.project.items.map((it) =>
-        it.id === itemId && it.type === 'slideshow' ? { ...it, frames: [...it.frames, clone] } : it
-      )
-      return { ...s, project: { ...s.project, items }, dirty: true }
-    })
-  }, [])
+  const pasteFrame = useCallback(
+    (itemId: string) => {
+      const copied = stateRef.current.copiedFrame
+      if (!copied) return
+      mutateFrames(itemId, (frames) => [...frames, { ...copied, id: uuid() }])
+    },
+    [mutateFrames]
+  )
 
   const value = useMemo<ProjectContextValue>(
     () => ({
-      ...state,
+      dir: state.dir,
+      project: state.project,
+      selectedItemId: state.selectedItemId,
+      copiedFrame: state.copiedFrame,
+      missingMedia: state.missingMedia,
+      busyMessage: state.busyMessage,
+      dirty,
+      canUndo: state.past.length > 0,
+      canRedo: state.future.length > 0,
       startNewProject,
       openProject,
       saveProject,
+      closeProject,
+      undo,
+      redo,
       addItem,
       updateItem,
       removeItem,
       duplicateItem,
       reorderItems,
       selectItem,
-      closeProject,
       updateCountdown,
       importToLibrary,
       removeFromLibrary,
@@ -425,16 +421,19 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     }),
     [
       state,
+      dirty,
       startNewProject,
       openProject,
       saveProject,
+      closeProject,
+      undo,
+      redo,
       addItem,
       updateItem,
       removeItem,
       duplicateItem,
       reorderItems,
       selectItem,
-      closeProject,
       updateCountdown,
       importToLibrary,
       removeFromLibrary,

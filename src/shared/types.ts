@@ -72,6 +72,9 @@ export interface VideoItem extends BaseItem {
 
 export interface SlideshowItem extends BaseItem {
   type: 'slideshow'
+  /** User-given name for the group shown in the playlist; '' means "name it automatically
+   * from its slides". */
+  name: string
   frames: SlideFrame[]
   /** Plays once for the whole rotation, from the moment the slideshow starts until it
    * ends — not tied to any single frame. */
@@ -117,8 +120,18 @@ export interface MediaLibrary {
   images: ImportedMediaFile[]
 }
 
+/** Settings used to build the copy-and-paste prompt for any AI chat that writes silly
+ * subtitle variations for text slides. Saved with the project so they're filled in next
+ * time. */
+export interface AiPromptSettings {
+  /** Free-text context, e.g. "Family movie night. Tonight's movie: The Goonies". */
+  event: string
+  tone: string
+  perTitle: number
+}
+
 export interface ProjectData {
-  formatVersion: 3
+  formatVersion: 4
   id: string
   name: string
   createdAt: string
@@ -126,12 +139,24 @@ export interface ProjectData {
   items: PlaylistItem[]
   countdown: CountdownConfig
   library: MediaLibrary
+  aiPrompt: AiPromptSettings
 }
 
 export interface OpenProjectResult {
   dir: string
-  project: ProjectData
+  /** Name of the JSON file that was opened, so saves go back to that same file. */
+  fileName: string
+  /** Parsed but unvalidated JSON; run it through normalizeProject before use. */
+  project: unknown
 }
+
+/** Outcome of choosing a folder for a new project: that folder may already hold one. */
+export type NewProjectChoice = { kind: 'new'; dir: string } | ({ kind: 'open' } & OpenProjectResult)
+
+export const PROJECT_FILE_NAME = 'project.json'
+
+/** Longest subtitle that still fits on one line on a typical projector. */
+export const SUBTITLE_MAX_CHARS = 60
 
 /** A media file a project refers to, used to check whether it's still present on disk. */
 export interface MediaRef {
