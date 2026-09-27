@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PlaylistItem } from '@shared/types'
-import { targetTimeToEpoch } from '@shared/countdown'
+import { shouldLoopPlaylist } from '@shared/countdown'
+import { clampIndex, nextItemIndex } from '@shared/showSequence'
 import { useProject } from '../../state/useProject'
 import { useBackgroundMusic, type BackgroundMusicController } from '../../hooks/useBackgroundMusic'
+import ErrorBoundary from '../../components/ErrorBoundary'
 import TransitionLayer from './TransitionLayer'
 import { enterDurationMs } from './transitions'
 import VideoStage from './VideoStage'
@@ -13,7 +15,9 @@ import ShowHud from './ShowHud'
 import './showplayer.css'
 
 interface StackEntry {
-  key: number
+  /** Unique for the life of the show (React key); never reused, even when an item repeats. */
+  id: number
+  index: number
   item: PlaylistItem
 }
 
@@ -59,6 +63,17 @@ function StageFor({
   }
 }
 
+/** Shown in place of a playlist item that failed to render: a moment of black, then on to
+ * the next item, so one bad item can't take down the whole show. */
+function SkipBrokenItem({ onDone }: { onDone: () => void }): React.JSX.Element {
+  useEffect(() => {
+    const id = setTimeout(onDone, 400)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return <div className="stage" />
+}
+
 export default function ShowPlayer({
   startIndex = 0,
   onExit
@@ -73,26 +88,18 @@ export default function ShowPlayer({
   const music = useBackgroundMusic(dir!)
   const popupVideoRef = useRef<PopupVideoHandle>(null)
 
-  const initialIndex = Math.min(Math.max(startIndex, 0), items.length - 1)
-  const [stack, setStack] = useState<StackEntry[]>(() => [
-    { key: initialIndex, item: items[initialIndex] }
-  ])
+  const [stack, setStack] = useState<StackEntry[]>(() => {
+    const index = clampIndex(startIndex, items.length)
+    return [{ id: 0, index, item: items[index] }]
+  })
   const [paused, setPaused] = useState(false)
   const [ending, setEnding] = useState(false)
-  const advancingRef = useRef(false)
-  /** How many times the playlist has looped back to the top, folded into each stack
-   * entry's key (key = loopCount * items.length + index) so keys stay unique forever. */
-  const loopCountRef = useRef(0)
-
-  // Only ever called from advance()/goTo(), themselves only reachable from event
-  // callbacks (never during render), so reading the live clock here is safe despite the
-  // purity lint rule's conservative static analysis of the enclosing component body.
-  function shouldLoopPlaylist(): boolean {
-    const cd = project!.countdown
-    if (!cd.enabled || cd.mode !== 'clock' || !cd.loopPlaylistUntilShowtime) return false
-    // eslint-disable-next-line react-hooks/purity
-    return targetTimeToEpoch(cd.targetTime) > Date.now()
-  }
+  const nextIdRef = useRef(1)
+  /** Id of the layer currently on top — the only one allowed to advance the show. Kept in a
+   * ref (not derived from state) so a second completion event arriving before React
+   * re-renders can't advance twice. */
+  const topIdRef = useRef(0)
+  const endingRef = useRef(false)
 
   const stopBackgroundAudio = useCallback(() => {
     music.stopImmediately()
@@ -111,35 +118,41 @@ export default function ShowPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const currentKey = stack[stack.length - 1].key
-  const currentIndex = currentKey % items.length
+  const top = stack[stack.length - 1]
 
-  function goTo(index: number): void {
-    if (index < 0 || index >= items.length) return
-    advancingRef.current = false
-    setStack([{ key: loopCountRef.current * items.length + index, item: items[index] }])
+  function show(index: number, replace: boolean): void {
+    const id = nextIdRef.current++
+    topIdRef.current = id
+    const entry = { id, index, item: items[index] }
+    if (replace) {
+      setStack([entry])
+      return
+    }
+    setStack((s) => [...s, entry])
+    // Drop the layers underneath once the new one has finished entering. Keeping "whatever
+    // is on top now" (rather than a specific id) means a skip in the meantime can never
+    // leave the stack empty.
+    setTimeout(() => setStack((s) => s.slice(-1)), enterDurationMs(items[index].transition) + 30)
   }
 
-  function advance(fromKey: number): void {
-    if (advancingRef.current || fromKey !== currentKey) return
-    const fromIndex = fromKey % items.length
-    const atEnd = fromIndex + 1 >= items.length
-    if (atEnd && !shouldLoopPlaylist()) {
-      advancingRef.current = true
+  function goTo(index: number): void {
+    if (endingRef.current || index < 0 || index >= items.length) return
+    show(index, true)
+  }
+
+  function advance(fromId: number, fromIndex: number): void {
+    if (endingRef.current || fromId !== topIdRef.current) return
+    // Only ever called from media/timer callbacks, never during render.
+    // eslint-disable-next-line react-hooks/purity
+    const loop = shouldLoopPlaylist(project!.countdown, Date.now())
+    const next = nextItemIndex(fromIndex, items.length, loop)
+    if (next === null) {
+      endingRef.current = true
       setEnding(true)
       setTimeout(onExit, 900)
       return
     }
-    advancingRef.current = true
-    if (atEnd) loopCountRef.current += 1
-    const nextIndex = atEnd ? 0 : fromIndex + 1
-    const nextKey = loopCountRef.current * items.length + nextIndex
-    setStack((s) => [...s, { key: nextKey, item: items[nextIndex] }])
-    const dur = enterDurationMs(items[nextIndex].transition)
-    setTimeout(() => {
-      setStack((s) => s.filter((l) => l.key === nextKey))
-      advancingRef.current = false
-    }, dur + 30)
+    show(next, false)
   }
 
   useEffect(() => {
@@ -150,38 +163,39 @@ export default function ShowPlayer({
         e.preventDefault()
         setPaused((p) => !p)
       } else if (e.key === 'ArrowRight') {
-        goTo(currentIndex + 1)
+        goTo(top.index + 1)
       } else if (e.key === 'ArrowLeft') {
-        goTo(currentIndex - 1)
+        goTo(top.index - 1)
       }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentKey])
-
-  const topTransition = stack[stack.length - 1].item.transition
+  }, [top.id])
 
   return (
     <div className="show-root">
       {stack.map((layer, i) => {
         const isTop = i === stack.length - 1
+        const onDone = (): void => advance(layer.id, layer.index)
         return (
           <TransitionLayer
-            key={layer.key}
+            key={layer.id}
             transition={layer.item.transition}
             exiting={!isTop}
-            exitDurationMs={enterDurationMs(topTransition)}
+            exitDurationMs={enterDurationMs(top.item.transition)}
           >
-            <StageFor
-              item={layer.item}
-              dir={dir!}
-              paused={paused && isTop}
-              music={music}
-              popupVideoRef={popupVideoRef}
-              stopBackgroundAudio={stopBackgroundAudio}
-              onDone={() => advance(layer.key)}
-            />
+            <ErrorBoundary fallback={() => <SkipBrokenItem onDone={onDone} />}>
+              <StageFor
+                item={layer.item}
+                dir={dir!}
+                paused={paused && isTop}
+                music={music}
+                popupVideoRef={popupVideoRef}
+                stopBackgroundAudio={stopBackgroundAudio}
+                onDone={onDone}
+              />
+            </ErrorBoundary>
           </TransitionLayer>
         )
       })}

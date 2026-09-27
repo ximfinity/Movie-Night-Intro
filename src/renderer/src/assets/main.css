@@ -84,7 +84,8 @@ input[type='range'] {
   accent-color: var(--accent);
 }
 
-label.field {
+label.field,
+div.field {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -93,7 +94,8 @@ label.field {
   margin-bottom: 14px;
 }
 
-label.field .field-label {
+label.field .field-label,
+div.field .field-label {
   display: flex;
   justify-content: space-between;
   color: var(--text-1);
@@ -113,4 +115,42 @@ label.field .field-label {
   accent-color: var(--accent);
   width: 16px;
   height: 16px;
+}
+
+.crash-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  z-index: 100;
+}
+
+.crash-card {
+  max-width: 460px;
+  padding: 28px 32px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-1);
+  border: 1px solid var(--border-strong);
+  text-align: center;
+}
+
+.crash-card h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.crash-detail {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: 18px;
+  word-break: break-word;
+}
+
+.crash-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-2);
 }

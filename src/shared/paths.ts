@@ -27,6 +27,13 @@ export function toFileUrl(absPath: string): string {
   return 'file://' + segments.join('/')
 }
 
+/** Wraps a URL for use in a CSS `url()`. Must be quoted: encodeURIComponent leaves `(` and
+ * `)` alone, and an unquoted url() containing them (e.g. "poster (1).png") is invalid CSS,
+ * so the background silently renders as nothing. */
+export function cssUrl(url: string): string {
+  return `url("${url.replace(/"/g, '%22')}")`
+}
+
 export function mediaFileUrl(projectDir: string, kind: MediaKind, fileName: string): string {
   const dir = projectDir.replace(/\\/g, '/').replace(/\/$/, '')
   return toFileUrl(`${dir}/${mediaRelPath(kind, fileName)}`)

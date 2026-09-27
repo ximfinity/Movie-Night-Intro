@@ -8,6 +8,8 @@ export const POPUP_VIDEO_BASE_WIDTH = 260
 export const POPUP_VIDEO_BASE_HEIGHT = 170
 
 export interface PopupVideoHandle {
+  /** Starts (or takes over) the pop-up video and returns an ownership token; only the
+   * current owner's fadeOutAndStop has any effect. */
   play: (
     fileName: string,
     opts: {
@@ -15,11 +17,12 @@ export interface PopupVideoHandle {
       fadeInSec: number
       position: OverlayPosition
       sizeScale: number
-      /** Called once when this clip finishes playing on its own (not on a manual stop). */
+      /** Called once when this clip finishes playing on its own, or fails to play (not on
+       * a manual stop). */
       onEnded?: () => void
     }
-  ) => void
-  fadeOutAndStop: (fadeOutSec: number) => void
+  ) => number
+  fadeOutAndStop: (token: number, fadeOutSec: number) => void
   stopImmediately: () => void
 }
 
@@ -38,6 +41,7 @@ export default function PopupVideoOverlay({
   const videoRef = useRef<HTMLVideoElement>(null)
   const currentFileRef = useRef<string | null>(null)
   const onEndedRef = useRef<(() => void) | undefined>(undefined)
+  const ownerRef = useRef(0)
   const [visible, setVisible] = useState(false)
   const [position, setPosition] = useState<OverlayPosition>('bottom-left')
   const [sizeScale, setSizeScale] = useState(3)
@@ -46,14 +50,15 @@ export default function PopupVideoOverlay({
     ref,
     () => ({
       play(fileName, opts) {
+        const token = ++ownerRef.current
         const el = videoRef.current
-        if (!el) return
+        if (!el) return token
         setPosition(opts.position)
         setSizeScale(opts.sizeScale)
         onEndedRef.current = opts.onEnded
         if (currentFileRef.current === fileName && !el.paused) {
           gsap.to(el, { volume: opts.volume, duration: 0.4, overwrite: true })
-          return
+          return token
         }
         gsap.killTweensOf(el)
         currentFileRef.current = fileName
@@ -61,25 +66,24 @@ export default function PopupVideoOverlay({
         el.volume = 0
         el.currentTime = 0
         setVisible(true)
-        el.play().catch(() => {})
+        el.play().catch((err) => console.warn('Pop-up video failed to play:', fileName, err))
         gsap.to(el, {
           volume: opts.volume,
           duration: Math.max(0.05, opts.fadeInSec),
           ease: 'linear'
         })
+        return token
       },
-      fadeOutAndStop(fadeOutSec) {
+      fadeOutAndStop(token, fadeOutSec) {
         const el = videoRef.current
-        if (!el) return
-        const fileAtCallTime = currentFileRef.current
-        gsap.killTweensOf(el)
+        if (!el || token !== ownerRef.current) return
         gsap.to(el, {
           volume: 0,
           duration: Math.max(0.05, fadeOutSec),
           ease: 'linear',
           overwrite: true,
           onComplete: () => {
-            if (currentFileRef.current === fileAtCallTime) {
+            if (token === ownerRef.current) {
               el.pause()
               setVisible(false)
               currentFileRef.current = null
@@ -88,6 +92,7 @@ export default function PopupVideoOverlay({
         })
       },
       stopImmediately() {
+        ownerRef.current++
         const el = videoRef.current
         if (el) {
           gsap.killTweensOf(el)
@@ -108,6 +113,15 @@ export default function PopupVideoOverlay({
     else el.play().catch(() => {})
   }, [paused, visible])
 
+  function handleFailed(): void {
+    // A clip that can't be decoded would otherwise leave a black box on screen and, with
+    // "repeat slides until the video ends", keep the slides looping forever.
+    console.warn('Pop-up video could not be played:', currentFileRef.current)
+    setVisible(false)
+    currentFileRef.current = null
+    onEndedRef.current?.()
+  }
+
   return (
     <div
       className={`popup-video popup-video-${position} ${visible ? '' : 'popup-video-hidden'}`}
@@ -116,7 +130,7 @@ export default function PopupVideoOverlay({
         height: POPUP_VIDEO_BASE_HEIGHT * sizeScale
       }}
     >
-      <video ref={videoRef} onEnded={() => onEndedRef.current?.()} />
+      <video ref={videoRef} onEnded={() => onEndedRef.current?.()} onError={handleFailed} />
     </div>
   )
 }

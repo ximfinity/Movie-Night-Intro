@@ -21,7 +21,8 @@ const MEDIA_SUBDIR: Record<MediaKind, string> = {
 }
 
 const MEDIA_FILTERS: Record<MediaKind, Electron.FileFilter[]> = {
-  video: [{ name: 'Video files', extensions: ['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v'] }],
+  // No .avi: Chromium can't decode it, so it would only ever be skipped at show time.
+  video: [{ name: 'Video files', extensions: ['mp4', 'webm', 'mov', 'mkv', 'm4v'] }],
   audio: [{ name: 'Audio files', extensions: ['mp3', 'm4a', 'wav', 'ogg', 'aac', 'flac'] }],
   image: [{ name: 'Image files', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] }]
 }

@@ -40,7 +40,7 @@ function useClockCountdown(config: CountdownConfig): CountdownState {
     return () => clearInterval(id)
   }, [])
 
-  const target = targetTimeToEpoch(config.targetTime)
+  const target = targetTimeToEpoch(config.targetTime, now)
   const [initialTotalSec] = useState(() => Math.max(1, (target - now) / 1000))
 
   const remaining = Math.max(0, (target - now) / 1000)

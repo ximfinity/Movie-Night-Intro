@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import type { SlideFrame } from '@shared/types'
-import { mediaFileUrl } from '@shared/paths'
+import { cssUrl, mediaFileUrl } from '@shared/paths'
 import { RANDOM_THEME, findSlideTheme, pickRandomSlideTheme } from '@shared/slideThemes'
 import { useCountdownTimer } from '../../hooks/useCountdownTimer'
 
@@ -112,7 +112,7 @@ export default function SlideFrameView({
           <div
             ref={kenBurnsRef}
             className="slide-bg-image"
-            style={{ backgroundImage: `url(${bgImageUrl})` }}
+            style={{ backgroundImage: cssUrl(bgImageUrl) }}
           />
         )}
       </div>
@@ -129,7 +129,7 @@ export default function SlideFrameView({
           <div
             ref={kenBurnsRef}
             className="slide-bg-image"
-            style={{ backgroundImage: `url(${bgImageUrl})` }}
+            style={{ backgroundImage: cssUrl(bgImageUrl) }}
           />
           <div className="slide-bg-scrim" />
         </div>

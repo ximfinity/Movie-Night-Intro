@@ -22,8 +22,8 @@ export default function VideoStage({
     stopBackgroundAudio()
     const el = videoRef.current
     if (!el) return
-    el.volume = item.volume
-    el.play().catch(() => {})
+    el.volume = Math.min(1, Math.max(0, item.volume ?? 1))
+    el.play().catch((err) => console.warn('Video failed to start:', item.fileName, err))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -34,9 +34,16 @@ export default function VideoStage({
     else el.play().catch(() => {})
   }, [paused])
 
+  function handleError(): void {
+    // Missing file or a format/codec Chromium can't decode: skip it rather than sitting on
+    // a black screen forever waiting for an `ended` event that will never come.
+    console.warn('Video could not be played, skipping:', item.fileName, videoRef.current?.error)
+    onDone()
+  }
+
   return (
     <div className="stage video-stage">
-      <video ref={videoRef} src={src} onEnded={onDone} />
+      <video ref={videoRef} src={src} onEnded={onDone} onError={handleError} />
     </div>
   )
 }

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { ProjectProvider } from './state/ProjectContext'
 import { useProject } from './state/useProject'
+import ErrorBoundary from './components/ErrorBoundary'
+import CrashScreen from './components/CrashScreen'
 import HomeScreen from './screens/HomeScreen'
 import EditorScreen from './screens/EditorScreen'
 import ShowPlayer from './screens/ShowPlayer/ShowPlayer'
@@ -17,16 +19,40 @@ function Shell(): React.JSX.Element {
   }
 
   if (view === 'show') {
-    return <ShowPlayer startIndex={startIndex} onExit={() => setView('editor')} />
+    return (
+      <ErrorBoundary
+        fallback={(error) => (
+          <CrashScreen
+            title="The show hit an unexpected problem"
+            detail={error.message}
+            actionLabel="Back to the editor"
+            onAction={() => setView('editor')}
+          />
+        )}
+      >
+        <ShowPlayer startIndex={startIndex} onExit={() => setView('editor')} />
+      </ErrorBoundary>
+    )
   }
 
   return (
-    <EditorScreen
-      onStartShow={(index) => {
-        setStartIndex(index ?? 0)
-        setView('show')
-      }}
-    />
+    <ErrorBoundary
+      fallback={(error, reset) => (
+        <CrashScreen
+          title="Something went wrong in the editor"
+          detail={`${error.message} — your project is still open; undo or reopen it if something looks off.`}
+          actionLabel="Try again"
+          onAction={reset}
+        />
+      )}
+    >
+      <EditorScreen
+        onStartShow={(index) => {
+          setStartIndex(index ?? 0)
+          setView('show')
+        }}
+      />
+    </ErrorBoundary>
   )
 }
 

@@ -39,7 +39,10 @@ export default function SlideshowStage({
   const frames = item.frames
   const loopUntilVideoEnds = item.music?.kind === 'video' && item.music.loopSlidesUntilEnd
   const [stack, setStack] = useState<FrameStackEntry[]>(() => [{ key: 0, frame: frames[0] }])
-  const advancingRef = useRef(false)
+  /** Key of the frame on top; only it may advance (ref so a duplicate completion event
+   * before the next render can't advance twice). */
+  const topKeyRef = useRef(0)
+  const finishedRef = useRef(false)
 
   const onDoneRef = useRef(onDone)
   useEffect(() => {
@@ -49,10 +52,11 @@ export default function SlideshowStage({
   useEffect(() => {
     const m = item.music
     const popupVideo = popupVideoRef.current
+    let token: number | undefined
     if (m) {
       if (m.kind === 'video') {
         music.stopImmediately()
-        popupVideo?.play(m.fileName, {
+        token = popupVideo?.play(m.fileName, {
           volume: m.volume,
           fadeInSec: m.fadeInSec,
           position: m.position,
@@ -61,36 +65,29 @@ export default function SlideshowStage({
         })
       } else {
         popupVideo?.stopImmediately()
-        music.playTrack(m.fileName, m.volume, m.fadeInSec)
+        token = music.playTrack(m.fileName, m.volume, m.fadeInSec)
       }
     }
     return () => {
-      if (m) {
-        if (m.kind === 'video') popupVideo?.fadeOutAndStop(m.fadeOutSec)
-        else music.fadeOutAndStop(m.fadeOutSec)
-      }
+      if (!m || token === undefined) return
+      if (m.kind === 'video') popupVideo?.fadeOutAndStop(token, m.fadeOutSec)
+      else music.fadeOutAndStop(token, m.fadeOutSec)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id])
 
-  const currentKey = stack[stack.length - 1].key
-
   function advanceFrame(fromKey: number): void {
-    if (advancingRef.current || fromKey !== currentKey) return
+    if (finishedRef.current || fromKey !== topKeyRef.current) return
     const nextStep = fromKey + 1
     if (!loopUntilVideoEnds && nextStep >= frames.length) {
-      advancingRef.current = true
+      finishedRef.current = true
       onDone()
       return
     }
-    advancingRef.current = true
+    topKeyRef.current = nextStep
     const nextFrame = frames[nextStep % frames.length]
     setStack((s) => [...s, { key: nextStep, frame: nextFrame }])
-    const dur = enterDurationMs(item.transition)
-    setTimeout(() => {
-      setStack((s) => s.filter((l) => l.key === nextStep))
-      advancingRef.current = false
-    }, dur + 30)
+    setTimeout(() => setStack((s) => s.slice(-1)), enterDurationMs(item.transition) + 30)
   }
 
   return (
