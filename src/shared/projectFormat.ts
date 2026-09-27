@@ -101,7 +101,7 @@ function normalizeSlideshow(raw: Raw, frames: SlideFrame[]): SlideshowItem {
   }
 }
 
-function normalizeItem(raw: unknown): PlaylistItem | null {
+export function normalizeItem(raw: unknown): PlaylistItem | null {
   if (!isObj(raw)) return null
   if (raw.type === 'video') {
     if (typeof raw.fileName !== 'string' || !raw.fileName) return null

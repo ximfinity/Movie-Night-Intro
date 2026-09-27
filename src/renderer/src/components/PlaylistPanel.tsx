@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -12,6 +13,7 @@ import { COUNTDOWN_SELECTION_ID } from '../state/context'
 import { createSlideshowItem, createVideoItem } from '@shared/factory'
 import { formatClockLabel, formatDuration } from '../lib/itemMeta'
 import SortableItemCard from './SortableItemCard'
+import { TemplatePickerDialog } from './TemplateDialogs'
 import MediaLibraryPanel from './MediaLibraryPanel'
 import './PlaylistPanel.css'
 
@@ -19,6 +21,7 @@ export default function PlaylistPanel(): React.JSX.Element {
   const { project, dir, addItem, reorderItems, selectedItemId, selectItem, importToLibrary } =
     useProject()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
+  const [showTemplates, setShowTemplates] = useState(false)
 
   if (!project || !dir) return <></>
 
@@ -76,7 +79,15 @@ export default function PlaylistPanel(): React.JSX.Element {
           >
             📝 Slide Group
           </button>
+          <button
+            className="btn add-btn add-template"
+            onClick={() => setShowTemplates(true)}
+            title="Insert a slide group saved in your template library"
+          >
+            📚 Template
+          </button>
         </div>
+        {showTemplates && <TemplatePickerDialog onClose={() => setShowTemplates(false)} />}
 
         {items.length === 0 ? (
           <div className="playlist-empty">

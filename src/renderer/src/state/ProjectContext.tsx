@@ -9,7 +9,9 @@ import type {
   PlaylistItem,
   ProjectData,
   SlideFrame,
-  SlideFrameContent
+  SlideFrameContent,
+  SlideshowItem,
+  TemplateInsertResult
 } from '@shared/types'
 import { PROJECT_FILE_NAME } from '@shared/types'
 import {
@@ -19,7 +21,7 @@ import {
   isPristineDefaultFrame,
   slideStyleOf
 } from '@shared/factory'
-import { collectMediaRefs, normalizeProject } from '@shared/projectFormat'
+import { collectMediaRefs, normalizeItem, normalizeProject } from '@shared/projectFormat'
 import { libraryKey } from '@shared/paths'
 import { userMessage } from '../lib/errors'
 import {
@@ -485,6 +487,87 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     [commit]
   )
 
+  const saveProjectAs = useCallback(async (): Promise<boolean> => {
+    const { dir, project } = stateRef.current
+    if (!dir || !project) return false
+    try {
+      const result = await window.api.saveProjectAs(dir, {
+        ...project,
+        updatedAt: new Date().toISOString()
+      })
+      if (!result) return false
+      const renamed = { ...project, name: result.name }
+      setState((s) => ({
+        ...loadedState(result.dir, PROJECT_FILE_NAME, renamed),
+        selectedItemId: s.selectedItemId,
+        copiedFrame: s.copiedFrame
+      }))
+      return true
+    } catch (err) {
+      window.alert(`Couldn't save a copy of the project.\n\n${userMessage(err)}`)
+      return false
+    }
+  }, [])
+
+  const saveGroupAsTemplate = useCallback(
+    async (itemId: string, name: string): Promise<boolean> => {
+      const { dir, project } = stateRef.current
+      const item = project?.items.find((it) => it.id === itemId)
+      if (!dir || item?.type !== 'slideshow') return false
+      try {
+        const { missing } = await window.api.saveTemplate(dir, name, item)
+        if (missing.length > 0) {
+          window.alert(
+            `Saved, but these files were missing from the project so the template doesn't include them:\n\n${missing.join('\n')}`
+          )
+        }
+        return true
+      } catch (err) {
+        window.alert(`Couldn't save the template.\n\n${userMessage(err)}`)
+        return false
+      }
+    },
+    []
+  )
+
+  const insertTemplate = useCallback(
+    async (templateId: string): Promise<boolean> => {
+      const dir = stateRef.current.dir
+      if (!dir) return false
+      let item: SlideshowItem
+      let media: TemplateInsertResult['media']
+      try {
+        const result = await window.api.insertTemplate(templateId, dir)
+        const normalized = normalizeItem(result.item)
+        if (normalized?.type !== 'slideshow') throw new Error('The template has no slides.')
+        item = cloneSlideshowItem(normalized)
+        media = result.media
+      } catch (err) {
+        window.alert(`Couldn't insert that template.\n\n${userMessage(err)}`)
+        return false
+      }
+      const after = stateRef.current.selectedItemId
+      commit((p) => {
+        const library = { ...p.library }
+        for (const { kind, file } of media) {
+          const key = libraryKey(kind)
+          if (!library[key].some((f) => f.fileName === file.fileName)) {
+            library[key] = [...library[key], file]
+          }
+        }
+        const idx = p.items.findIndex((it) => it.id === after)
+        const items =
+          idx === -1
+            ? [...p.items, item]
+            : [...p.items.slice(0, idx + 1), item, ...p.items.slice(idx + 1)]
+        return { ...p, items, library }
+      })
+      setState((s) => ({ ...s, selectedItemId: item.id }))
+      return true
+    },
+    [commit]
+  )
+
   const value = useMemo<ProjectContextValue>(
     () => ({
       dir: state.dir,
@@ -520,7 +603,10 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       pasteFrame,
       dismissMissingMedia,
       applySubtitlePlan,
-      updateAiPrompt
+      updateAiPrompt,
+      saveProjectAs,
+      saveGroupAsTemplate,
+      insertTemplate
     }),
     [
       state,
@@ -549,7 +635,10 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       pasteFrame,
       dismissMissingMedia,
       applySubtitlePlan,
-      updateAiPrompt
+      updateAiPrompt,
+      saveProjectAs,
+      saveGroupAsTemplate,
+      insertTemplate
     ]
   )
 

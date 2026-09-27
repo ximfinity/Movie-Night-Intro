@@ -164,3 +164,22 @@ export interface MediaRef {
   fileName: string
   displayName: string
 }
+
+/** A saved slide group in the user's template library (shared by all projects). */
+export interface TemplateSummary {
+  id: string
+  name: string
+  createdAt: string
+  slideCount: number
+  /** First few slide titles, to recognise the template by. */
+  sampleTitles: string[]
+  musicName: string | null
+}
+
+export interface TemplateInsertResult {
+  /** The template's slide group, with media file names pointing into the project. Parsed
+   * but unvalidated; normalize before use. */
+  item: unknown
+  /** Media files copied into the project, to add to its library. */
+  media: { kind: MediaKind; file: ImportedMediaFile }[]
+}

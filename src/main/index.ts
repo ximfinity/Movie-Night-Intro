@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join, basename, dirname, extname } from 'path'
+import { join, basename, dirname, extname, resolve } from 'path'
 import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -9,10 +9,13 @@ import type {
   MediaKind,
   MediaRef,
   NewProjectChoice,
-  OpenProjectResult
+  OpenProjectResult,
+  TemplateInsertResult,
+  TemplateSummary
 } from '../shared/types'
 import { PROJECT_FILE_NAME } from '../shared/types'
 import { mediaRelPath } from '../shared/paths'
+import { deleteTemplate, insertTemplate, listTemplates, saveTemplate } from './templates'
 
 let mainWindow: BrowserWindow | null = null
 /** Mirrors the editor's "unsaved changes" state so closing the window can ask first. */
@@ -192,6 +195,61 @@ function registerIpcHandlers(): void {
     await ensureProjectFolders(dir)
     await writeProjectFile(dir, fileName, project)
   })
+
+  ipcMain.handle(
+    'project:saveAs',
+    async (
+      _evt,
+      fromDir: string,
+      project: Record<string, unknown>
+    ): Promise<{ dir: string; name: string } | null> => {
+      if (!mainWindow) return null
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: 'Choose or create a folder for the copy',
+        properties: ['openDirectory', 'createDirectory']
+      })
+      if (result.canceled || result.filePaths.length === 0) return null
+      const dir = result.filePaths[0]
+      if (resolve(dir) === resolve(fromDir)) {
+        throw new Error('That is the folder this project is already in — choose a different one.')
+      }
+      if (existsSync(join(dir, PROJECT_FILE_NAME))) {
+        const { response } = await dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          buttons: ['Replace it', 'Cancel'],
+          defaultId: 1,
+          cancelId: 1,
+          message: 'That folder already has a Movie Night project.',
+          detail: 'Replace it with a copy of this one? The old one is kept as project.json.bak.'
+        })
+        if (response !== 0) return null
+      }
+      const srcMedia = join(fromDir, 'media')
+      if (existsSync(srcMedia)) {
+        await fs.cp(srcMedia, join(dir, 'media'), { recursive: true, force: true })
+      }
+      await ensureProjectFolders(dir)
+      const name = basename(dir)
+      await writeProjectFile(dir, PROJECT_FILE_NAME, { ...project, name })
+      return { dir, name }
+    }
+  )
+
+  ipcMain.handle('templates:list', (): Promise<TemplateSummary[]> => listTemplates())
+
+  ipcMain.handle(
+    'templates:save',
+    (_evt, projectDir: string, name: string, item: Record<string, unknown>) =>
+      saveTemplate(projectDir, String(name ?? ''), item)
+  )
+
+  ipcMain.handle(
+    'templates:insert',
+    (_evt, id: string, projectDir: string): Promise<TemplateInsertResult> =>
+      insertTemplate(id, projectDir)
+  )
+
+  ipcMain.handle('templates:delete', (_evt, id: string) => deleteTemplate(id))
 
   ipcMain.handle('media:pickFiles', async (_evt, kind: MediaKind): Promise<string[]> => {
     assertKind(kind)

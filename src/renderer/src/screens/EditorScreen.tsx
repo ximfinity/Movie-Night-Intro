@@ -14,6 +14,7 @@ export default function EditorScreen({
     project,
     dirty,
     saveProject,
+    saveProjectAs,
     closeProject,
     missingMedia,
     dismissMissingMedia,
@@ -98,6 +99,13 @@ export default function EditorScreen({
           </button>
           <button className="btn" onClick={saveProject} disabled={!dirty}>
             Save
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={saveProjectAs}
+            title="Save a copy (with all its media) in another folder — e.g. to start next month's show from this one"
+          >
+            Save As…
           </button>
           {selectedItem && (
             <button

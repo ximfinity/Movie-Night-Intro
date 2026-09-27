@@ -32,6 +32,7 @@ import { autoGroupName, frameLabel } from '../../lib/itemMeta'
 import TransitionSelect from './TransitionSelect'
 import ThemeSwatches from './ThemeSwatches'
 import SlidePreview from './SlidePreview'
+import { SaveTemplateDialog } from '../TemplateDialogs'
 import AiSubtitlesDialog from './AiSubtitlesDialog'
 import { usePromptCopier } from '../../hooks/usePromptCopier'
 
@@ -58,6 +59,7 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
   const [dragging, setDragging] = useState(false)
   /** Open AI dialog: for the whole group, or for one slide (frameId). */
   const [aiDialog, setAiDialog] = useState<{ frameId?: string } | null>(null)
+  const [savingTemplate, setSavingTemplate] = useState(false)
   const aiFrame = aiDialog?.frameId ? item.frames.find((f) => f.id === aiDialog.frameId) : undefined
   const expandedIndex = Math.max(
     0,
@@ -86,15 +88,32 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
   return (
     <div className="slideshow-inspector">
       <div className="slideshow-settings">
-        <label className="field">
+        <div className="field">
           <span className="field-label">Group name</span>
-          <input
-            type="text"
-            value={item.name}
-            placeholder={autoGroupName(item)}
-            onChange={(e) => updateItem(item.id, { name: e.target.value })}
+          <div className="group-name-row">
+            <input
+              type="text"
+              aria-label="Group name"
+              value={item.name}
+              placeholder={autoGroupName(item)}
+              onChange={(e) => updateItem(item.id, { name: e.target.value })}
+            />
+            <button
+              className="btn btn-ghost"
+              onClick={() => setSavingTemplate(true)}
+              title="Save this group (with its images and music) for reuse in any project"
+            >
+              📚 Save as template
+            </button>
+          </div>
+        </div>
+        {savingTemplate && (
+          <SaveTemplateDialog
+            itemId={item.id}
+            defaultName={item.name.trim() || autoGroupName(item)}
+            onClose={() => setSavingTemplate(false)}
           />
-        </label>
+        )}
 
         <TransitionSelect
           value={item.transition}

@@ -91,6 +91,12 @@ export interface ProjectContextValue {
   /** Applies a reviewed subtitle import as one undo step; returns ids of new slides. */
   applySubtitlePlan: (itemId: string, plan: SubtitlePlanEntry[]) => string[]
   updateAiPrompt: (patch: Partial<AiPromptSettings>) => void
+  /** Copies the project and its media to a new folder and continues working there. */
+  saveProjectAs: () => Promise<boolean>
+  /** Saves a slide group (and copies of its media) to the shared template library. */
+  saveGroupAsTemplate: (itemId: string, name: string) => Promise<boolean>
+  /** Adds a template's slide group after the selected item, copying its media in. */
+  insertTemplate: (templateId: string) => Promise<boolean>
 }
 
 export const ProjectContext = createContext<ProjectContextValue | null>(null)

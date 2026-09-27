@@ -77,6 +77,8 @@
   justify-content: center;
   font-size: 13px;
   white-space: nowrap;
+  padding: 9px 10px;
+  gap: 6px;
 }
 
 .playlist-empty {

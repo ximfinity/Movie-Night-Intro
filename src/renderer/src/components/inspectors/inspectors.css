@@ -548,3 +548,19 @@
   color: var(--accent);
   white-space: nowrap;
 }
+
+.group-name-row {
+  display: flex;
+  gap: 8px;
+}
+
+.group-name-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.group-name-row .btn {
+  flex-shrink: 0;
+  font-size: 12px;
+  border: 1px solid var(--border-strong);
+}

@@ -200,3 +200,44 @@ div.field .field-label {
   padding-top: 16px;
   border-top: 1px solid var(--border);
 }
+
+.template-empty {
+  font-size: 13px;
+  color: var(--text-1);
+  line-height: 1.6;
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.template-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-0);
+}
+
+.template-card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-card-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.template-card-meta,
+.template-card-sample {
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

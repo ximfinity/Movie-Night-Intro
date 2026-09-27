@@ -6,7 +6,10 @@ import type {
   MediaRef,
   NewProjectChoice,
   OpenProjectResult,
-  ProjectData
+  ProjectData,
+  SlideshowItem,
+  TemplateInsertResult,
+  TemplateSummary
 } from '../shared/types'
 
 const api = {
@@ -16,6 +19,22 @@ const api = {
     ipcRenderer.invoke('project:openExisting'),
   saveProject: (dir: string, fileName: string, project: ProjectData): Promise<void> =>
     ipcRenderer.invoke('project:save', dir, fileName, project),
+  /** Copies the project (with its media) into a folder the user picks. */
+  saveProjectAs: (
+    dir: string,
+    project: ProjectData
+  ): Promise<{ dir: string; name: string } | null> =>
+    ipcRenderer.invoke('project:saveAs', dir, project),
+  listTemplates: (): Promise<TemplateSummary[]> => ipcRenderer.invoke('templates:list'),
+  saveTemplate: (
+    projectDir: string,
+    name: string,
+    item: SlideshowItem
+  ): Promise<{ template: TemplateSummary; missing: string[] }> =>
+    ipcRenderer.invoke('templates:save', projectDir, name, item),
+  insertTemplate: (id: string, projectDir: string): Promise<TemplateInsertResult> =>
+    ipcRenderer.invoke('templates:insert', id, projectDir),
+  deleteTemplate: (id: string): Promise<void> => ipcRenderer.invoke('templates:delete', id),
   pickMediaFiles: (kind: MediaKind): Promise<string[]> =>
     ipcRenderer.invoke('media:pickFiles', kind),
   copyMediaIntoProject: (
