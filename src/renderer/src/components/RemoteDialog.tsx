@@ -73,18 +73,7 @@ function RemoteDialog({ onClose }: { onClose: () => void }): React.JSX.Element {
       {status?.running && (
         <div className="remote-connect">
           {status.urls.length > 0 ? (
-            <>
-              <div className="remote-step">
-                1. Connect your phone to the <strong>same Wi-Fi</strong> as this PC, then open:
-              </div>
-              {status.urls.map((url) => (
-                <div key={url} className="remote-url">
-                  {url.replace(/^http:\/\//, '')}
-                </div>
-              ))}
-              <div className="remote-step">2. Enter this PIN:</div>
-              <div className="remote-pin">{status.pin}</div>
-            </>
+            <RemoteConnect urls={status.urls} pin={status.pin} />
           ) : (
             <p className="feature-warning">
               This PC isn&apos;t on a network right now. Connect it to Wi-Fi (or your event&apos;s
@@ -117,5 +106,60 @@ function RemoteDialog({ onClose }: { onClose: () => void }): React.JSX.Element {
         </button>
       </div>
     </Modal>
+  )
+}
+
+/** Scan-to-connect QR code (it carries the PIN, so the phone signs straight in), with the
+ * typed address and PIN as the fallback. */
+function RemoteConnect({ urls, pin }: { urls: string[]; pin: string }): React.JSX.Element {
+  const [url, setUrl] = useState(urls[0])
+  const [qr, setQr] = useState<string | null>(null)
+  const current = urls.includes(url) ? url : urls[0]
+
+  useEffect(() => {
+    let cancelled = false
+    window.api
+      .remoteQrCode(current)
+      .then((dataUrl) => !cancelled && setQr(dataUrl))
+      .catch(() => !cancelled && setQr(null))
+    return () => {
+      cancelled = true
+    }
+  }, [current, pin])
+
+  return (
+    <div className="remote-connect-grid">
+      <div className="remote-qr">
+        {qr ? (
+          <img src={qr} alt="QR code to open the phone remote" />
+        ) : (
+          <div className="remote-qr-empty" />
+        )}
+        <div className="remote-step">Scan with your phone&apos;s camera</div>
+      </div>
+      <div>
+        <div className="remote-step">
+          Your phone must be on the <strong>same Wi-Fi</strong> as this PC. No camera? Open:
+        </div>
+        {urls.length > 1 ? (
+          <select
+            className="remote-url-select"
+            value={current}
+            onChange={(e) => setUrl(e.target.value)}
+            title="This PC is on more than one network: pick the one your phone uses"
+          >
+            {urls.map((u) => (
+              <option key={u} value={u}>
+                {u.replace(/^http:\/\//, '')}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="remote-url">{current.replace(/^http:\/\//, '')}</div>
+        )}
+        <div className="remote-step">and enter this PIN:</div>
+        <div className="remote-pin">{pin}</div>
+      </div>
+    </div>
   )
 }

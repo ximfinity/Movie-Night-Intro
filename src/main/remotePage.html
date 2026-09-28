@@ -506,6 +506,22 @@
           update()
         }
 
+        async function login(pin) {
+          const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: pin })
+          })
+          const body = await res.json()
+          if (!res.ok) throw new Error(body.error || 'Could not connect.')
+          token = body.token
+          try {
+            localStorage.setItem('mni-remote-token', token)
+          } catch (e) {}
+          loggedOut = false
+          poll()
+        }
+
         function showLogin(message) {
           loggedOut = true
           viewKey = ''
@@ -522,26 +538,22 @@
           const submit = async () => {
             go.disabled = true
             try {
-              const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pin: input.value })
-              })
-              const body = await res.json()
-              if (!res.ok) throw new Error(body.error || 'Could not connect.')
-              token = body.token
-              try {
-                localStorage.setItem('mni-remote-token', token)
-              } catch (e) {}
-              loggedOut = false
-              poll()
+              await login(input.value)
             } catch (e) {
               document.getElementById('err').textContent = e.message
               go.disabled = false
             }
           }
-          go.onclick = submit
-          input.onkeydown = (e) => e.key === 'Enter' && submit()
+          go.addEventListener('click', submit)
+          // Only Enter is special; every other key must reach the input.
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submit()
+          })
+          // Connect as soon as four digits are in.
+          input.addEventListener('input', () => {
+            input.value = input.value.replace(/\D/g, '').slice(0, 4)
+            if (input.value.length === 4 && !go.disabled) submit()
+          })
           input.focus()
         }
 
@@ -596,7 +608,13 @@
         setInterval(poll, 1000)
         setInterval(update, 250)
         document.addEventListener('visibilitychange', () => !document.hidden && poll())
-        if (token) poll()
+        // Scanning the QR code in the app opens this page with #pin=1234: sign in with it,
+        // then drop it from the address bar.
+        const hashPin = (location.hash.match(/pin=(\d{4})/) || [])[1]
+        if (hashPin) {
+          history.replaceState(null, '', location.pathname)
+          login(hashPin).catch((e) => showLogin(e.message))
+        } else if (token) poll()
         else showLogin()
       })()
     </script>

@@ -93,9 +93,10 @@ Click **Feature Presentation** at the top of the sidebar:
 
 ### Phone remote
 
-**📱 Remote** in the editor turns on a small web page the app serves on your Wi-Fi. Open the
-address it shows on any phone on the same network and enter the 4-digit PIN (no app to
-install). From the phone: start the pre-show, **wrap up / start the movie**, pause, skip,
+**📱 Remote** in the editor turns on a small web page the app serves on your Wi-Fi.
+**Scan the QR code** it shows with your phone's camera and you're connected (it carries the
+PIN, so there's nothing to type), or open the address it shows on any phone on the same
+network and enter the 4-digit PIN. No app to install. From the phone: start the pre-show, **wrap up / start the movie**, pause, skip,
 change the volume, move the countdown (±5 min, "start in 2 / 5 / 10 min"), and during a
 built-in movie pause, seek, change the volume and toggle subtitles.
 

@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import http from 'http'
 import os from 'os'
 import crypto from 'crypto'
+import QRCode from 'qrcode'
 import { join } from 'path'
 import fs from 'fs/promises'
 import {
@@ -260,6 +261,17 @@ export async function initRemote(windowGetter: () => BrowserWindow | null): Prom
   if (settings.enabled) await start()
 
   ipcMain.handle('remote:status', (): RemoteServerStatus => status())
+
+  /** QR code (data: URL) that opens the remote on a phone and signs it in with the PIN.
+   * Only for an address this server is actually on. */
+  ipcMain.handle('remote:qr', async (_evt, url: string): Promise<string> => {
+    if (!status().urls.includes(url)) throw new Error('That address is not available.')
+    return QRCode.toDataURL(`${url}/#pin=${settings.pin}`, {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 360
+    })
+  })
 
   ipcMain.handle('remote:setEnabled', async (_evt, enabled: boolean) => {
     settings.enabled = enabled === true

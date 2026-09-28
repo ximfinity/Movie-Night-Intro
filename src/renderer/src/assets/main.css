@@ -339,3 +339,34 @@ div.field .field-label {
   flex-shrink: 0;
   border: 1px solid var(--border);
 }
+
+.remote-connect-grid {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.remote-qr {
+  text-align: center;
+}
+
+.remote-qr img,
+.remote-qr-empty {
+  width: 200px;
+  height: 200px;
+  border-radius: var(--radius-md);
+  background: #fff;
+  display: block;
+}
+
+.remote-qr .remote-step {
+  margin-top: 8px;
+}
+
+.remote-url-select {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 16px;
+  margin-bottom: 10px;
+}

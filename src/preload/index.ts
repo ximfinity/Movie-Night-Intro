@@ -80,6 +80,7 @@ const api = {
   setRemoteEnabled: (enabled: boolean): Promise<RemoteServerStatus> =>
     ipcRenderer.invoke('remote:setEnabled', enabled),
   newRemotePin: (): Promise<RemoteServerStatus> => ipcRenderer.invoke('remote:newPin'),
+  remoteQrCode: (url: string): Promise<string> => ipcRenderer.invoke('remote:qr', url),
   sendRemoteState: (state: RemoteState): void => ipcRenderer.send('remote:state', state),
   onRemoteCommand: (callback: (command: RemoteCommand) => void): (() => void) => {
     const listener = (_evt: Electron.IpcRendererEvent, command: RemoteCommand): void =>
