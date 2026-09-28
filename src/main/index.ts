@@ -16,6 +16,9 @@ import type {
 import { PROJECT_FILE_NAME } from '../shared/types'
 import { mediaRelPath } from '../shared/paths'
 import { deleteTemplate, insertTemplate, listTemplates, saveTemplate } from './templates'
+import { registerFeatureHandlers } from './feature'
+import { registerQrHandlers } from './qr'
+import { initRemote, shutdownRemote } from './remote'
 
 let mainWindow: BrowserWindow | null = null
 /** Mirrors the editor's "unsaved changes" state so closing the window can ask first. */
@@ -55,7 +58,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#0b0e14',
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform !== 'darwin' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -324,11 +327,18 @@ app.whenReady().then(() => {
   })
 
   registerIpcHandlers()
+  registerFeatureHandlers(() => mainWindow)
+  registerQrHandlers()
   createWindow()
+  initRemote(() => mainWindow).catch((err) => console.error('Phone remote failed to start:', err))
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('before-quit', () => {
+  shutdownRemote()
 })
 
 app.on('window-all-closed', () => {

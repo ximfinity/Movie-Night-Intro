@@ -9,8 +9,9 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useProject } from '../state/useProject'
-import { COUNTDOWN_SELECTION_ID } from '../state/context'
-import { createSlideshowItem, createVideoItem } from '@shared/factory'
+import { COUNTDOWN_SELECTION_ID, FEATURE_SELECTION_ID } from '../state/context'
+import { createSlideshowItem, createVideoItem, hasFeatureMovie } from '@shared/factory'
+import type { FeatureConfig } from '@shared/types'
 import { formatClockLabel, formatDuration } from '../lib/itemMeta'
 import SortableItemCard from './SortableItemCard'
 import { TemplatePickerDialog } from './TemplateDialogs'
@@ -27,6 +28,7 @@ export default function PlaylistPanel(): React.JSX.Element {
 
   const items = project.items
   const countdown = project.countdown
+  const feature = project.feature
 
   async function handleAddVideo(): Promise<void> {
     const files = await importToLibrary('video')
@@ -64,6 +66,16 @@ export default function PlaylistPanel(): React.JSX.Element {
           </div>
         </div>
       </button>
+      <button
+        className={`countdown-card feature-card ${selectedItemId === FEATURE_SELECTION_ID ? 'countdown-card-selected' : ''}`}
+        onClick={() => selectItem(FEATURE_SELECTION_ID)}
+      >
+        <span className="countdown-card-icon feature-card-icon">🎞️</span>
+        <div className="countdown-card-text">
+          <div className="countdown-card-title">Feature Presentation</div>
+          <div className="countdown-card-subtitle">{featureSummary(feature)}</div>
+        </div>
+      </button>
 
       <div className="playlist-scroll">
         <MediaLibraryPanel />
@@ -82,7 +94,7 @@ export default function PlaylistPanel(): React.JSX.Element {
           <button
             className="btn add-btn add-template"
             onClick={() => setShowTemplates(true)}
-            title="Insert a slide group saved in your template library"
+            title="Insert a ready-made slide group (theme nights) or one from your template library"
           >
             📚 Template
           </button>
@@ -118,4 +130,11 @@ export default function PlaylistPanel(): React.JSX.Element {
       </div>
     </div>
   )
+}
+
+function featureSummary(feature: FeatureConfig): string {
+  if (!hasFeatureMovie(feature)) return 'No movie set · pre-show only'
+  const what = feature.title || (feature.source === 'stream' ? 'Streaming link' : 'Movie file')
+  const start = feature.startMode === 'auto' ? 'starts automatically' : 'waits for go button'
+  return `${what} · ${start}`
 }

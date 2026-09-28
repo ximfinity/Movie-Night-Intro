@@ -1,13 +1,31 @@
 # Movie Night Intro
 
 A Windows desktop app for building an animated pre-show playlist — video clips, local
-music tracks, and animated text announcement slides — capped off with an animated
-countdown timer overlay so everyone knows when the movie starts.
+music tracks, and animated text announcement slides — with a countdown overlay so
+everyone knows when the movie starts, and a hand-off into the feature itself: a "starting
+shortly" hold screen, an "Our Feature Presentation" curtain card, the movie, and a
+"Thanks for coming" card. Run it all from your phone.
 
 Built with Electron + React + TypeScript, with [GSAP](https://gsap.com) powering the
 transitions and animations.
 
 ## Features
+
+### Start fast: the New Show wizard
+
+- **✨ New Show** on the home screen: pick a theme night (**Classic, Halloween, Christmas,
+  Kids' night, Birthday, PTA / school**), type the movie title and showtime, tick the
+  sections you want, and get a complete, ready-to-run pre-show. **Every slide already has
+  silly lines written**, in the theme's colors, with the countdown set to your showtime.
+- Sections include a welcome, house rules, snacks and **Tonight's Feature** (now showing,
+  a **Fun Facts** slide, enjoy the show). PTA nights add a **concessions price list**,
+  **sponsors & volunteer thank-yous**, a **fundraiser/raffle** group with a **QR code slide**
+  made from your donation link, and **upcoming events & safety** (exits, restrooms, kids
+  stay with a grown-up).
+- The wizard also fills in the AI prompt with tonight's movie, so one copy-and-paste adds
+  movie-specific jokes and real trivia (Fun Facts slides ask the AI for true facts, not
+  jokes).
+- Any built-in group can be added to an existing show from **📚 Template → ✨ Built-in**.
 
 ### Building the show
 
@@ -18,7 +36,8 @@ transitions and animations.
   entrance animation, and an optional background image or GIF) or a full-bleed
   **image/GIF slide**. A text slide's subtitle can hold several **variations**; the show
   rotates through all of them before repeating any, so the same line never shows twice in
-  a row.
+  a row. Or show **all lines at once as a list** — menus, sponsor lists, schedules; a line
+  like `Popcorn | $2` becomes a dotted price column.
 - **Live preview** — the selected slide plays beside its settings, rendered exactly as
   the fullscreen show will draw it, re-rolling a new variation each time it replays
   (🎲 **Shuffle** to see another right away).
@@ -54,6 +73,38 @@ transitions and animations.
   starting next month's show from this one.
 - **Media library** — bulk-import clips, tracks or images once and reuse them anywhere.
 
+### The feature presentation
+
+Click **Feature Presentation** at the top of the sidebar:
+
+- **The movie**: a file on this PC (linked where it is, never copied), played **in the app**
+  (seamless, with **.srt/.vtt subtitles** and **resume after a crash**) or in **your own
+  video player** (VLC etc., for formats the app can't decode — it also falls back to this
+  automatically). Or a **Netflix / Disney+ link**, opened in your browser at showtime.
+- **At showtime** the item playing finishes, then the **hold screen** ("The movie will be
+  starting shortly") comes up with the title, poster, looping music and a slide group
+  rotating behind it. Then either **start automatically** after a hold time you choose, or
+  **wait for the go button** (`Enter` or the phone remote). `Enter` also wraps up the
+  pre-show early.
+- **Into the movie**: an animated **"Our Feature Presentation"** curtain card, a fade to
+  black, or your own intro clip. **After the movie**, a "Thanks for coming!" card.
+- If a showing is interrupted, the Feature Presentation panel (and the remote) offers
+  **⏯ Resume the movie** where it stopped.
+
+### Phone remote
+
+**📱 Remote** in the editor turns on a small web page the app serves on your Wi-Fi. Open the
+address it shows on any phone on the same network and enter the 4-digit PIN (no app to
+install). From the phone: start the pre-show, **wrap up / start the movie**, pause, skip,
+change the volume, move the countdown (±5 min, "start in 2 / 5 / 10 min"), and during a
+built-in movie pause, seek, change the volume and toggle subtitles.
+
+The first time, Windows asks whether the app may use the network: allow it on **private
+networks**, and set your event's Wi-Fi to _Private_ in Windows settings. Guest and school
+networks often block phones from reaching other devices, so a dedicated router for the
+event is the reliable choice. Repeated wrong PINs lock out for a minute; **New PIN**
+signs every phone out.
+
 ### Running the show
 
 - **Countdown overlay** — a ring/flip-clock/pulsing countdown in a corner of your choice,
@@ -61,9 +112,11 @@ transitions and animations.
   accurate across restarts, and a just-after-midnight time counts down correctly) or a
   fixed duration. **Loop the playlist until showtime** restarts the playlist if it ends
   before the target time.
-- **Fullscreen show mode** — **Start Show** goes fullscreen. `Esc` exits, `Space` pauses,
-  `←`/`→` skip between items. Select an item first and **Start From Selected** resumes
-  from there instead of the top.
+- **Fullscreen show mode** — **Start Show** goes fullscreen. Select an item first and
+  **Start From Selected** resumes from there instead of the top. Keys: `Space` pause ·
+  `←`/`→` skip (10 s in the movie) · `↑`/`↓` volume · `Enter` wrap up / start the
+  movie · `M` start the movie now · `C` subtitles · `Esc` exit (press twice during the
+  movie).
 - **Resilient playback** — a video that can't be played (missing, or a format Chromium
   can't decode) is skipped instead of freezing the show; music never cuts out between two
   slide groups; one broken item is skipped rather than blanking the screen.
@@ -118,23 +171,26 @@ run with **publish_release** checked.
 
 ```
 src/
-  main/       Electron main process — dialogs, media import, crash-safe saves, templates
+  main/       Electron main process — dialogs, media import, crash-safe saves, templates,
+              movie hand-off and resume points, the phone remote's web server (remote.ts,
+              remotePage.html), QR-code slides
   preload/    Context-bridge API exposed to the renderer as window.api
   renderer/   React UI: Home screen, playlist editor, fullscreen show player
   shared/     Types and pure logic shared by main and renderer (project format and
-              migrations, show sequencing, countdown math, AI prompt/reply handling),
-              with unit tests alongside (*.test.ts)
+              migrations, show sequencing, showtime math, AI prompt/reply handling,
+              built-in theme nights, subtitles, the remote protocol), with unit tests
+              alongside (*.test.ts)
 ```
 
 ## Typical workflow
 
-1. **New Project** → choose (or create) a folder to hold this project's `project.json`
-   and media. (Or **Open Project**, then **Save As…** to start from last month's show.)
-2. Click **Countdown Overlay** at the top of the sidebar to set the start time, style
-   and position.
-3. Add a **📝 Slide Group**, open **✨ Quick build & AI**, paste your titles, copy the
-   prompt into your favorite AI chat and paste its reply back. Pick a theme swatch and
-   click **Use this look for all slides**.
-4. Add **🎬 Video Clips** (or a **📚 Template**), and give each slide group music or a
-   pop-up video. Drag to reorder.
-5. **Save** (or `Ctrl+S`), then **Start Show** to go fullscreen and run it automatically.
+1. **✨ New Show** → pick a theme night, type the movie and showtime, choose sections, and
+   pick a folder for the project. (Or **+ Blank project**, or **Open Project** then
+   **Save As…** to start from last month's show.)
+2. In **Tonight's Feature**, click **✨ Quick build & AI → Copy prompt**, paste it into your
+   favorite AI chat and paste its reply back for movie-specific jokes and trivia.
+3. Click **Feature Presentation** to choose the movie file or streaming link, and whether
+   it starts automatically at showtime or waits for your go button.
+4. Add **🎬 Video Clips**, music or a pop-up video per group; drag to reorder.
+5. Turn on **📱 Remote**, open it on your phone, then **Save** and **Start Show** (from
+   the PC or the phone).

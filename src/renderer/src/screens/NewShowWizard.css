@@ -1,0 +1,242 @@
+.wizard {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(5, 6, 10, 0.72);
+  backdrop-filter: blur(6px);
+}
+
+.wizard-card {
+  width: min(880px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+  animation: rise 0.3s ease;
+}
+
+.wizard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 22px 26px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wizard-kicker {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.wizard-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.wizard-steps {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wizard-steps li {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--bg-2);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}
+
+.wizard-steps li.wizard-step-current {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent);
+}
+
+.wizard-body {
+  padding: 20px 26px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.wizard-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 26px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.wizard-footer-right {
+  display: flex;
+  gap: 10px;
+}
+
+/* Step 1: themes */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.theme-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  text-align: left;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-0);
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.theme-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+
+.theme-card-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+
+.theme-card-swatches {
+  display: flex;
+  gap: 4px;
+  height: 46px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.theme-card-swatches span {
+  flex: 1;
+}
+
+.theme-card-emoji {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  font-size: 26px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.theme-card-label {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.theme-card-desc {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+/* Step 2: details */
+
+.wizard-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.wizard-row:has(.wizard-time) {
+  grid-template-columns: minmax(0, 1fr) 160px;
+}
+
+.wizard-row-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.wizard-form textarea {
+  font-size: 12px;
+  resize: vertical;
+}
+
+.wizard-movie {
+  margin-bottom: 14px;
+}
+
+/* Step 3: sections */
+
+.section-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.section-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  cursor: pointer;
+}
+
+.section-option-on {
+  border-color: var(--accent);
+}
+
+.section-option input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+.section-option-label {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.section-option-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+.wizard-summary {
+  margin-top: 16px;
+}
+
+@media (max-width: 720px) {
+  .theme-grid,
+  .section-list,
+  .wizard-row,
+  .wizard-row-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

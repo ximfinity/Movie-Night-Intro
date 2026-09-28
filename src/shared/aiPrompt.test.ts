@@ -30,6 +30,23 @@ describe('buildSubtitlePrompt', () => {
     expect(prompt.trim().endsWith('```')).toBe(true)
   })
 
+  it('asks for real fun facts on trivia slides', () => {
+    const p = buildSubtitlePrompt({
+      titles: [
+        { title: 'Now Showing: Jaws', existing: [] },
+        { title: 'Fun Facts: Jaws', existing: [], trivia: true }
+      ],
+      event: '',
+      tone: '',
+      perTitle: 5,
+      maxChars: 60
+    })
+    expect(p).toMatch(
+      /trivia slides: instead of jokes, write true, verifiable fun facts[^\n]*\nTITLE: Fun Facts: Jaws/
+    )
+    expect(p).not.toMatch(/trivia slides[^\n]*\n(?:TITLE: [^\n]*\n)*TITLE: Now Showing/)
+  })
+
   it('falls back to sensible defaults', () => {
     const p = buildSubtitlePrompt({
       titles: [{ title: 'Snacks', existing: [] }],

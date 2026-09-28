@@ -53,6 +53,14 @@
   opacity: 0.9;
 }
 
+.feature-card-icon {
+  background: linear-gradient(135deg, #d7263d, #8e0b1f);
+}
+
+.feature-card .countdown-card-subtitle {
+  text-transform: none;
+}
+
 .countdown-card-title {
   font-size: 13px;
   font-weight: 600;

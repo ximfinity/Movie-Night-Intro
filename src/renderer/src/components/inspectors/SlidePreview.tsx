@@ -59,7 +59,7 @@ export default function SlidePreview({
         />
       </div>
       <p className="inspector-hint slide-preview-hint">
-        {frame.content === 'text' && variations > 1
+        {frame.content === 'text' && variations > 1 && frame.bodyStyle !== 'list'
           ? `Replays every ${frame.durationSec}s with another of the ${variations} lines${frame.theme === RANDOM_THEME ? ' and a random theme' : ''} — every line shows once before any repeats.`
           : `Replays every ${frame.durationSec}s, just like the show.`}
       </p>

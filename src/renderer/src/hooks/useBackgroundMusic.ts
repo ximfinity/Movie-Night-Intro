@@ -1,11 +1,12 @@
-import { useMemo, useRef } from 'react'
-import gsap from 'gsap'
+import { useEffect, useMemo, useRef } from 'react'
 import { mediaFileUrl } from '@shared/paths'
+import { ScaledVolume } from '../lib/showVolume'
 
 export interface BackgroundMusicController {
   /** Starts (or takes over, if the same track is already playing) the background track and
-   * returns an ownership token. Only the current owner's fadeOutAndStop has any effect. */
-  playTrack: (fileName: string, targetVolume: number, fadeInSec: number) => number
+   * returns an ownership token. Only the current owner's fadeOutAndStop has any effect.
+   * `loop` repeats the track until it's stopped (the hold screen's music). */
+  playTrack: (fileName: string, targetVolume: number, fadeInSec: number, loop?: boolean) => number
   fadeOutAndStop: (token: number, fadeOutSec: number) => void
   stopImmediately: () => void
 }
@@ -17,46 +18,54 @@ export interface BackgroundMusicController {
  * slideshow starts its music before the outgoing one unmounts, so the outgoing one's
  * fade-out must not touch music it no longer owns. */
 export function useBackgroundMusic(dir: string): BackgroundMusicController {
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioRef = useRef<{ el: HTMLAudioElement; volume: ScaledVolume } | null>(null)
   const currentFileRef = useRef<string | null>(null)
   const ownerRef = useRef(0)
 
+  useEffect(
+    () => () => {
+      audioRef.current?.el.pause()
+      audioRef.current?.volume.dispose()
+      audioRef.current = null
+    },
+    []
+  )
+
   return useMemo<BackgroundMusicController>(() => {
-    function ensureAudio(): HTMLAudioElement {
+    function ensureAudio(): { el: HTMLAudioElement; volume: ScaledVolume } {
       if (!audioRef.current) {
-        audioRef.current = new Audio()
+        const el = new Audio()
+        audioRef.current = { el, volume: new ScaledVolume(el) }
       }
       return audioRef.current
     }
 
     return {
-      playTrack(fileName, targetVolume, fadeInSec) {
+      playTrack(fileName, targetVolume, fadeInSec, loop = false) {
         const token = ++ownerRef.current
-        const el = ensureAudio()
+        const { el, volume } = ensureAudio()
+        el.loop = loop
         if (currentFileRef.current === fileName && !el.paused) {
-          gsap.to(el, { volume: targetVolume, duration: 0.4, overwrite: true })
+          volume.stopFades()
+          volume.fadeTo(targetVolume, 0.4)
           return token
         }
-        gsap.killTweensOf(el)
+        volume.set(0)
         currentFileRef.current = fileName
         el.src = mediaFileUrl(dir, 'audio', fileName)
-        el.volume = 0
         el.currentTime = 0
         el.play().catch((err) => console.warn('Background music failed to play:', fileName, err))
-        gsap.to(el, { volume: targetVolume, duration: Math.max(0.05, fadeInSec), ease: 'linear' })
+        volume.fadeTo(targetVolume, fadeInSec)
         return token
       },
       fadeOutAndStop(token, fadeOutSec) {
-        const el = audioRef.current
-        if (!el || token !== ownerRef.current) return
-        gsap.to(el, {
-          volume: 0,
-          duration: Math.max(0.05, fadeOutSec),
-          ease: 'linear',
+        const audio = audioRef.current
+        if (!audio || token !== ownerRef.current) return
+        audio.volume.fadeTo(0, fadeOutSec, {
           overwrite: true,
           onComplete: () => {
             if (token === ownerRef.current) {
-              el.pause()
+              audio.el.pause()
               currentFileRef.current = null
             }
           }
@@ -64,10 +73,10 @@ export function useBackgroundMusic(dir: string): BackgroundMusicController {
       },
       stopImmediately() {
         ownerRef.current++
-        const el = audioRef.current
-        if (el) {
-          gsap.killTweensOf(el)
-          el.pause()
+        const audio = audioRef.current
+        if (audio) {
+          audio.volume.stopFades()
+          audio.el.pause()
         }
         currentFileRef.current = null
       }

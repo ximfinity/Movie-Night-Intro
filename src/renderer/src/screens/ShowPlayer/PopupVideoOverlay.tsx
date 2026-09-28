@@ -1,7 +1,7 @@
 import { useEffect, useImperativeHandle, useRef, useState } from 'react'
-import gsap from 'gsap'
 import type { OverlayPosition } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
+import { ScaledVolume } from '../../lib/showVolume'
 
 /** Base size (px) the pop-up video's sizeScale multiplies. */
 export const POPUP_VIDEO_BASE_WIDTH = 260
@@ -39,12 +39,25 @@ export default function PopupVideoOverlay({
   ref: React.Ref<PopupVideoHandle>
 }): React.JSX.Element {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const volumeRef = useRef<ScaledVolume | null>(null)
   const currentFileRef = useRef<string | null>(null)
   const onEndedRef = useRef<(() => void) | undefined>(undefined)
   const ownerRef = useRef(0)
   const [visible, setVisible] = useState(false)
   const [position, setPosition] = useState<OverlayPosition>('bottom-left')
   const [sizeScale, setSizeScale] = useState(3)
+
+  // Created on first use: a slide group's effect can call play() before this component's
+  // own effects have run.
+  const volumeFor = (el: HTMLVideoElement): ScaledVolume =>
+    (volumeRef.current ??= new ScaledVolume(el))
+  useEffect(
+    () => () => {
+      volumeRef.current?.dispose()
+      volumeRef.current = null
+    },
+    []
+  )
 
   useImperativeHandle(
     ref,
@@ -56,31 +69,24 @@ export default function PopupVideoOverlay({
         setPosition(opts.position)
         setSizeScale(opts.sizeScale)
         onEndedRef.current = opts.onEnded
+        const volume = volumeFor(el)
         if (currentFileRef.current === fileName && !el.paused) {
-          gsap.to(el, { volume: opts.volume, duration: 0.4, overwrite: true })
+          volume.fadeTo(opts.volume, 0.4, { overwrite: true })
           return token
         }
-        gsap.killTweensOf(el)
+        volume.set(0)
         currentFileRef.current = fileName
         el.src = mediaFileUrl(dir, 'video', fileName)
-        el.volume = 0
         el.currentTime = 0
         setVisible(true)
         el.play().catch((err) => console.warn('Pop-up video failed to play:', fileName, err))
-        gsap.to(el, {
-          volume: opts.volume,
-          duration: Math.max(0.05, opts.fadeInSec),
-          ease: 'linear'
-        })
+        volume.fadeTo(opts.volume, opts.fadeInSec)
         return token
       },
       fadeOutAndStop(token, fadeOutSec) {
         const el = videoRef.current
         if (!el || token !== ownerRef.current) return
-        gsap.to(el, {
-          volume: 0,
-          duration: Math.max(0.05, fadeOutSec),
-          ease: 'linear',
+        volumeRef.current?.fadeTo(0, fadeOutSec, {
           overwrite: true,
           onComplete: () => {
             if (token === ownerRef.current) {
@@ -95,7 +101,7 @@ export default function PopupVideoOverlay({
         ownerRef.current++
         const el = videoRef.current
         if (el) {
-          gsap.killTweensOf(el)
+          volumeRef.current?.stopFades()
           el.pause()
         }
         setVisible(false)

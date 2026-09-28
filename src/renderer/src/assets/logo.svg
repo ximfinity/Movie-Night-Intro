@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs>
+  <linearGradient id="mni-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5e0c18"/><stop offset="1" stop-color="#240407"/></linearGradient>
+  <linearGradient id="mni-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="0.55" stop-color="#f2b84b"/><stop offset="1" stop-color="#c98a1e"/></linearGradient>
+  <linearGradient id="mni-red" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9e0f24"/><stop offset="0.5" stop-color="#dc2a42"/><stop offset="1" stop-color="#9e0f24"/></linearGradient>
+  <radialGradient id="mni-spot" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff3c4" stop-opacity="0.6"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/></radialGradient>
+  <clipPath id="mni-inner"><rect x="36" y="36" width="440" height="440" rx="90"/></clipPath>
+  <filter id="mni-shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/></filter></defs>
+<rect x="16" y="16" width="480" height="480" rx="108" fill="url(#mni-bg)"/>
+<g clip-path="url(#mni-inner)">
+  <ellipse cx="256" cy="320" rx="150" ry="175" fill="url(#mni-spot)"/>
+  <ellipse cx="256" cy="444" rx="118" ry="18" fill="#fff3c4" opacity="0.2"/>
+  <path d="M36,60 L222,60 C198,150 150,250 170,480 L36,480 Z" fill="url(#mni-red)"/>
+  <path d="M476,60 L290,60 C314,150 362,250 342,480 L476,480 Z" fill="url(#mni-red)"/>
+  <path d="M74,64 C80,200 66,330 72,470" stroke="#6b0f1c" stroke-width="7" fill="none" opacity="0.65"/><path d="M112,64 C118,200 104,330 110,470" stroke="#6b0f1c" stroke-width="7" fill="none" opacity="0.65"/><path d="M150,64 C156,200 142,330 148,470" stroke="#6b0f1c" stroke-width="7" fill="none" opacity="0.65"/><path d="M438,64 C432,200 446,330 440,470" stroke="#6b0f1c" stroke-width="7" fill="none" opacity="0.65"/><path d="M400,64 C394,200 408,330 402,470" stroke="#6b0f1c" stroke-width="7" fill="none" opacity="0.65"/><path d="M362,64 C356,200 370,330 364,470" stroke="#6b0f1c" stroke-width="7" fill="none" opacity="0.65"/>
+  <rect x="136" y="352" width="44" height="12" rx="6" fill="url(#mni-gold)" transform="rotate(-12 158 358)"/>
+  <rect x="332" y="352" width="44" height="12" rx="6" fill="url(#mni-gold)" transform="rotate(12 354 358)"/>
+  <rect x="36" y="36" width="440" height="30" fill="#8e0b1f"/>
+  <path d="M36.0,58 Q72.6,126 109.3,58 Z" fill="#b3172d"/><path d="M41.0,98 Q72.6,128 104.0,98" stroke="url(#mni-gold)" stroke-width="6" fill="none"/><path d="M109.3,58 Q145.9,126 182.6,58 Z" fill="#b3172d"/><path d="M114.3,98 Q145.9,128 177.3,98" stroke="url(#mni-gold)" stroke-width="6" fill="none"/><path d="M182.6,58 Q219.2,126 255.9,58 Z" fill="#b3172d"/><path d="M187.6,98 Q219.2,128 250.6,98" stroke="url(#mni-gold)" stroke-width="6" fill="none"/><path d="M255.9,58 Q292.5,126 329.2,58 Z" fill="#b3172d"/><path d="M260.9,98 Q292.5,128 323.9,98" stroke="url(#mni-gold)" stroke-width="6" fill="none"/><path d="M329.2,58 Q365.8,126 402.5,58 Z" fill="#b3172d"/><path d="M334.2,98 Q365.8,128 397.2,98" stroke="url(#mni-gold)" stroke-width="6" fill="none"/><path d="M402.5,58 Q439.1,126 475.8,58 Z" fill="#b3172d"/><path d="M407.5,98 Q439.1,128 470.5,98" stroke="url(#mni-gold)" stroke-width="6" fill="none"/>
+</g>
+<rect x="16" y="16" width="480" height="480" rx="108" fill="none" stroke="url(#mni-gold)" stroke-width="12"/>
+<g filter="url(#mni-shadow)">
+  <circle cx="256" cy="296" r="78" fill="#240407" stroke="url(#mni-gold)" stroke-width="11"/>
+  <polygon points="231,251 231,341 303,296" fill="url(#mni-gold)" stroke="url(#mni-gold)" stroke-width="6" stroke-linejoin="round"/>
+</g>
+</svg>

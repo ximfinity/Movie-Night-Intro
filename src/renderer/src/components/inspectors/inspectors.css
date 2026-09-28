@@ -564,3 +564,117 @@
   font-size: 12px;
   border: 1px solid var(--border-strong);
 }
+
+/* Feature presentation */
+
+.feature-inspector {
+  max-width: 640px;
+}
+
+.feature-section {
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.feature-section:last-child {
+  border-bottom: none;
+}
+
+.field-label-plain {
+  display: block;
+  font-size: 12px;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+
+.feature-path {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feature-warning {
+  font-size: 12px;
+  color: var(--warning, #f5a524);
+  margin: 6px 0 10px;
+  line-height: 1.5;
+}
+
+.feature-resume {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent);
+  background: rgba(242, 184, 75, 0.08);
+  font-size: 13px;
+}
+
+.feature-keys {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-1);
+  line-height: 2;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 20px;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  background: var(--bg-2);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--text-0);
+}
+
+/* Subtitle display: one line at a time, or a list */
+
+.body-style-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.body-style-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+}
+
+.body-style-toggle .btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.body-style-toggle .body-style-active {
+  background: var(--bg-3, rgba(255, 255, 255, 0.08));
+  color: var(--accent-strong);
+}
+
+.ai-kind-select {
+  width: auto;
+  font-size: 12px;
+  padding: 4px 8px;
+}

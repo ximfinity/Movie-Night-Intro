@@ -95,3 +95,8 @@
     transform: rotate(360deg);
   }
 }
+
+.notice-banner {
+  background: rgba(242, 184, 75, 0.12);
+  border-bottom-color: rgba(242, 184, 75, 0.35);
+}

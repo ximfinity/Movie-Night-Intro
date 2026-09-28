@@ -1,15 +1,5 @@
 import { useEffect, useState } from 'react'
 import type { CountdownConfig } from '@shared/types'
-import { targetTimeToEpoch } from '@shared/countdown'
-import { useCountdownTimer } from '../../hooks/useCountdownTimer'
-
-type Phase = 'counting' | 'complete' | 'hidden'
-
-interface CountdownState {
-  remaining: number
-  phase: Phase
-  totalSec: number
-}
 
 function formatClock(totalSeconds: number): { minutes: string; seconds: string } {
   const s = Math.max(0, Math.ceil(totalSeconds))
@@ -19,63 +9,41 @@ function formatClock(totalSeconds: number): { minutes: string; seconds: string }
   }
 }
 
-/** Counts down a fixed length from the moment the overlay mounts (i.e. the show start) —
- * resets to the full duration every time the show is (re)started. */
-function useDurationCountdown(config: CountdownConfig, paused: boolean): CountdownState {
-  const [phase, setPhase] = useState<Phase>('counting')
-  const remaining = useCountdownTimer(config.durationSec, paused || phase !== 'counting', () =>
-    setPhase('complete')
-  )
-  useCountdownTimer(config.holdAtZeroSec, paused || phase !== 'complete', () => setPhase('hidden'))
-  return { remaining, phase, totalSec: config.durationSec }
-}
-
-/** Counts down to an absolute time of day, computed from the wall clock rather than
- * elapsed-since-mount — stays correct no matter how many times the show is
- * stopped/restarted, and deliberately ignores `paused` since showtime doesn't pause. */
-function useClockCountdown(config: CountdownConfig): CountdownState {
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(id)
-  }, [])
-
-  const target = targetTimeToEpoch(config.targetTime, now)
-  const [initialTotalSec] = useState(() => Math.max(1, (target - now) / 1000))
-
-  const remaining = Math.max(0, (target - now) / 1000)
-  const overrun = Math.max(0, (now - target) / 1000)
-  const phase: Phase =
-    now < target ? 'counting' : overrun < config.holdAtZeroSec ? 'complete' : 'hidden'
-
-  return { remaining, phase, totalSec: initialTotalSec }
-}
-
 /** Persistent countdown-to-showtime widget, layered on top of whatever playlist item is
- * currently playing. Runs independently of which video/slide is on screen, then fades
- * itself out once complete. */
+ * currently playing. When showtime falls comes from the show player (`getShowtime`), which
+ * accounts for the mode, pauses, and adjustments made from the phone remote; the overlay
+ * just shows it, then its completion message, then fades itself out. */
 export default function CountdownOverlay({
   config,
-  paused
+  getShowtime
 }: {
   config: CountdownConfig
-  paused: boolean
+  getShowtime: (now: number) => number
 }): React.JSX.Element | null {
-  const durationState = useDurationCountdown(config, paused)
-  const clockState = useClockCountdown(config)
-  const { remaining, phase, totalSec } = config.mode === 'clock' ? clockState : durationState
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 100)
+    return () => clearInterval(id)
+  }, [])
+  const target = getShowtime(now)
+  const remaining = Math.max(0, (target - now) / 1000)
+  // The ring's full circle is the time left when the show started (or more, if showtime
+  // was pushed back since).
+  const [initialSec] = useState(() => Math.max(1, remaining))
+  const totalSec = Math.max(initialSec, remaining)
+  const overrun = (now - target) / 1000
 
-  if (!config.enabled || phase === 'hidden') return null
+  if (!config.enabled || overrun >= config.holdAtZeroSec) return null
 
   const { minutes, seconds } = formatClock(remaining)
-  const progress = totalSec > 0 ? 1 - remaining / totalSec : 1
+  const progress = 1 - remaining / totalSec
   const wholeSecond = Math.ceil(remaining)
 
   return (
     <div
       className={`countdown-overlay countdown-overlay-${config.position} countdown-style-${config.style}`}
     >
-      {phase === 'counting' ? (
+      {remaining > 0 ? (
         <>
           <div className="countdown-overlay-label">{config.label}</div>
           <div className="countdown-overlay-display">

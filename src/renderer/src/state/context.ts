@@ -2,18 +2,25 @@ import { createContext } from 'react'
 import type {
   AiPromptSettings,
   CountdownConfig,
+  FeatureConfig,
   ImportedMediaFile,
   MediaKind,
   MediaRef,
+  MovieSource,
+  MovieStartMode,
   PlaylistItem,
   ProjectData,
   SlideFrame,
   SlideFrameContent
 } from '@shared/types'
+import type { SectionId, ShowDetails, ThemeNightId } from '@shared/builtinTemplates'
 
 /** Sentinel selectedItemId value meaning "the countdown overlay settings are selected"
  * (the countdown is a project-level setting, not a playlist item). */
 export const COUNTDOWN_SELECTION_ID = '__countdown__'
+
+/** Sentinel selectedItemId value for the feature presentation (movie + showtime) settings. */
+export const FEATURE_SELECTION_ID = '__feature__'
 
 /** One slide's worth of an imported AI reply: add `lines` to slide `frameId`, or create a
  * new slide titled `title` when frameId is absent. */
@@ -21,6 +28,19 @@ export interface SubtitlePlanEntry {
   frameId?: string
   title: string
   lines: string[]
+}
+
+/** Everything the New Show wizard collected. */
+export interface WizardPlan {
+  theme: ThemeNightId
+  sections: SectionId[]
+  details: ShowDetails
+  /** "HH:mm" */
+  showtime: string
+  /** PTA fundraiser: becomes a QR-code slide. */
+  donationUrl: string
+  movie: { source: MovieSource; filePath: string; streamUrl: string }
+  startMode: MovieStartMode
 }
 
 export interface ProjectState {
@@ -44,6 +64,8 @@ export interface ProjectState {
   lastEdit: { key: string | null; at: number }
   /** Shown as a blocking overlay while a slow operation (copying media) runs. */
   busyMessage: string | null
+  /** A one-off tip shown at the top of the editor (e.g. after the wizard); never saved. */
+  notice: string | null
 }
 
 export interface ProjectContextValue {
@@ -53,10 +75,15 @@ export interface ProjectContextValue {
   copiedFrame: SlideFrame | null
   missingMedia: MediaRef[]
   busyMessage: string | null
+  notice: string | null
   dirty: boolean
   canUndo: boolean
   canRedo: boolean
   startNewProject: () => Promise<void>
+  /** Builds a whole show from the wizard's answers in a folder the user picks. Resolves
+   * true once it's open in the editor. */
+  createShowFromWizard: (plan: WizardPlan) => Promise<boolean>
+  dismissNotice: () => void
   openProject: () => Promise<void>
   /** Resolves true once the project is safely on disk; shows the error and resolves false
    * otherwise. */
@@ -72,6 +99,7 @@ export interface ProjectContextValue {
   reorderItems: (fromIndex: number, toIndex: number) => void
   selectItem: (id: string | null) => void
   updateCountdown: (patch: Partial<CountdownConfig>) => void
+  updateFeature: (patch: Partial<FeatureConfig>) => void
   importToLibrary: (kind: MediaKind) => Promise<ImportedMediaFile[]>
   removeFromLibrary: (kind: MediaKind, fileName: string) => void
   /** Appends a slide in the group's current look; returns its id. */

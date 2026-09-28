@@ -38,6 +38,15 @@ export interface SlideMusic {
 
 export type SlideFrameContent = 'text' | 'image'
 
+/** 'rotate' shows one subtitle line at a time, picked from the variations; 'list' shows
+ * every line at once (a price menu, sponsor list or schedule). A "Name | $2" line in a
+ * list renders as two columns joined by a dotted leader. */
+export type SlideBodyStyle = 'rotate' | 'list'
+
+/** What the copy-and-paste AI prompt asks for on this slide: silly lines, or true trivia
+ * about tonight's movie. */
+export type SlideAiKind = 'jokes' | 'trivia'
+
 /** One frame within a Slideshow item. Frames rotate automatically, each for its own
  * duration, while the slideshow's single shared music track keeps playing underneath. */
 export interface SlideFrame {
@@ -53,6 +62,8 @@ export interface SlideFrame {
   backgroundImage: string | null
   backgroundImageDisplayName: string | null
   durationSec: number
+  bodyStyle: SlideBodyStyle
+  aiKind: SlideAiKind
 }
 
 export interface BaseItem {
@@ -130,8 +141,49 @@ export interface AiPromptSettings {
   perTitle: number
 }
 
+export type MovieSource = 'none' | 'file' | 'stream'
+/** 'builtin' plays the file inside the show (seamless, but only formats Chromium can
+ * decode); 'external' hands it to the PC's default video player (VLC etc.). */
+export type MoviePlayer = 'builtin' | 'external'
+/** At showtime: roll the movie automatically after the hold screen, or wait for a go
+ * button (keyboard or phone remote). */
+export type MovieStartMode = 'auto' | 'manual'
+export type MovieTransition = 'bumper' | 'fade' | 'clip'
+
+/** The feature presentation that follows the pre-show: what to play, how showtime is
+ * handled, and the hold ("starting shortly") and end ("thanks for coming") screens. */
+export interface FeatureConfig {
+  source: MovieSource
+  /** Absolute path of the movie file. Linked where it is, never copied into the project
+   * (movies are gigabytes). */
+  filePath: string
+  player: MoviePlayer
+  /** Absolute path of a .srt/.vtt subtitle file for the built-in player; '' for none. */
+  subtitlePath: string
+  /** https link to the title on a streaming service, opened in the default browser. */
+  streamUrl: string
+  /** Tonight's movie, shown on the hold screen. */
+  title: string
+  /** Poster image from the project's media library. */
+  posterImage: string | null
+  startMode: MovieStartMode
+  /** Auto mode: how long the hold screen stays up before the movie rolls. */
+  holdSec: number
+  transition: MovieTransition
+  /** Video from the project's library played just before the movie ('clip' transition). */
+  introClip: string | null
+  holdMessage: string
+  /** Audio from the project's library looped quietly on the hold screen. */
+  holdMusic: string | null
+  holdMusicVolume: number
+  /** Slide group rotated behind the hold screen's message. */
+  holdSlideGroupId: string | null
+  endMessage: string
+  endSlideGroupId: string | null
+}
+
 export interface ProjectData {
-  formatVersion: 4
+  formatVersion: 5
   id: string
   name: string
   createdAt: string
@@ -140,6 +192,7 @@ export interface ProjectData {
   countdown: CountdownConfig
   library: MediaLibrary
   aiPrompt: AiPromptSettings
+  feature: FeatureConfig
 }
 
 export interface OpenProjectResult {

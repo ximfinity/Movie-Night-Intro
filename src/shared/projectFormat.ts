@@ -1,5 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import type {
+  FeatureConfig,
   ImportedMediaFile,
   MediaKind,
   MediaLibrary,
@@ -17,6 +18,7 @@ import type {
 import {
   createDefaultAiPrompt,
   createDefaultCountdown,
+  createDefaultFeature,
   createSlideFrame,
   DEFAULT_SLIDE_STYLE
 } from './factory'
@@ -64,7 +66,37 @@ function normalizeSlideFrame(raw: Raw): SlideFrame {
     textAnimation: oneOf(raw.textAnimation, ANIMATIONS, DEFAULT_SLIDE_STYLE.textAnimation),
     backgroundImage: bg,
     backgroundImageDisplayName: bg ? str(raw.backgroundImageDisplayName, bg) : null,
-    durationSec: num(raw.durationSec, DEFAULT_SLIDE_STYLE.durationSec, 1, 120)
+    durationSec: num(raw.durationSec, DEFAULT_SLIDE_STYLE.durationSec, 1, 120),
+    bodyStyle: raw.bodyStyle === 'list' ? 'list' : 'rotate',
+    aiKind: raw.aiKind === 'trivia' ? 'trivia' : 'jokes'
+  }
+}
+
+function fileNameOrNull(v: unknown): string | null {
+  return typeof v === 'string' && v ? v : null
+}
+
+function normalizeFeature(raw: unknown): FeatureConfig {
+  const d = createDefaultFeature()
+  if (!isObj(raw)) return d
+  return {
+    source: oneOf(raw.source, ['none', 'file', 'stream'], d.source),
+    filePath: str(raw.filePath, d.filePath),
+    player: oneOf(raw.player, ['builtin', 'external'], d.player),
+    subtitlePath: str(raw.subtitlePath, d.subtitlePath),
+    streamUrl: str(raw.streamUrl, d.streamUrl),
+    title: str(raw.title, d.title),
+    posterImage: fileNameOrNull(raw.posterImage),
+    startMode: oneOf(raw.startMode, ['auto', 'manual'], d.startMode),
+    holdSec: Math.round(num(raw.holdSec, d.holdSec, 0, 600)),
+    transition: oneOf(raw.transition, ['bumper', 'fade', 'clip'], d.transition),
+    introClip: fileNameOrNull(raw.introClip),
+    holdMessage: str(raw.holdMessage, d.holdMessage),
+    holdMusic: fileNameOrNull(raw.holdMusic),
+    holdMusicVolume: num(raw.holdMusicVolume, d.holdMusicVolume, 0, 1),
+    holdSlideGroupId: fileNameOrNull(raw.holdSlideGroupId),
+    endMessage: str(raw.endMessage, d.endMessage),
+    endSlideGroupId: fileNameOrNull(raw.endSlideGroupId)
   }
 }
 
@@ -156,7 +188,7 @@ export function normalizeProject(raw: unknown): ProjectData {
   const aiRaw = isObj(raw.aiPrompt) ? raw.aiPrompt : {}
   const defaults = createDefaultAiPrompt()
   return {
-    formatVersion: 4,
+    formatVersion: 5,
     id: str(raw.id, '') || uuid(),
     name: str(raw.name, 'Movie Night'),
     createdAt: str(raw.createdAt, now),
@@ -168,7 +200,8 @@ export function normalizeProject(raw: unknown): ProjectData {
       event: str(aiRaw.event, defaults.event),
       tone: str(aiRaw.tone, defaults.tone),
       perTitle: Math.round(num(aiRaw.perTitle, defaults.perTitle, 1, 20))
-    }
+    },
+    feature: normalizeFeature(raw.feature)
   }
 }
 
@@ -185,6 +218,10 @@ export function collectMediaRefs(project: ProjectData): MediaRef[] {
   project.library.videos.forEach((f) => add('video', f.fileName, f.displayName))
   project.library.audio.forEach((f) => add('audio', f.fileName, f.displayName))
   project.library.images.forEach((f) => add('image', f.fileName, f.displayName))
+  const feature = project.feature
+  add('image', feature.posterImage)
+  add('audio', feature.holdMusic)
+  add('video', feature.introClip)
   for (const item of project.items) {
     if (item.type === 'video') {
       add('video', item.fileName, item.displayName)

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { VideoItem } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
+import { ScaledVolume } from '../../lib/showVolume'
 
 export default function VideoStage({
   item,
@@ -22,8 +23,9 @@ export default function VideoStage({
     stopBackgroundAudio()
     const el = videoRef.current
     if (!el) return
-    el.volume = Math.min(1, Math.max(0, item.volume ?? 1))
+    const volume = new ScaledVolume(el, Math.min(1, Math.max(0, item.volume ?? 1)))
     el.play().catch((err) => console.warn('Video failed to start:', item.fileName, err))
+    return () => volume.dispose()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -2,6 +2,7 @@ import { v4 as uuid } from 'uuid'
 import type {
   AiPromptSettings,
   CountdownConfig,
+  FeatureConfig,
   MediaLibrary,
   ProjectData,
   SlideFrame,
@@ -43,6 +44,28 @@ export function createDefaultAiPrompt(): AiPromptSettings {
   return { event: '', tone: 'silly and punny', perTitle: 5 }
 }
 
+export function createDefaultFeature(): FeatureConfig {
+  return {
+    source: 'none',
+    filePath: '',
+    player: 'builtin',
+    subtitlePath: '',
+    streamUrl: '',
+    title: '',
+    posterImage: null,
+    startMode: 'manual',
+    holdSec: 30,
+    transition: 'bumper',
+    introClip: null,
+    holdMessage: 'The movie will be starting shortly',
+    holdMusic: null,
+    holdMusicVolume: 0.5,
+    holdSlideGroupId: null,
+    endMessage: 'Thanks for coming!',
+    endSlideGroupId: null
+  }
+}
+
 export function createEmptyLibrary(): MediaLibrary {
   return { videos: [], audio: [], images: [] }
 }
@@ -50,7 +73,7 @@ export function createEmptyLibrary(): MediaLibrary {
 export function createEmptyProject(name: string): ProjectData {
   const now = new Date().toISOString()
   return {
-    formatVersion: 4,
+    formatVersion: 5,
     id: uuid(),
     name,
     createdAt: now,
@@ -58,7 +81,8 @@ export function createEmptyProject(name: string): ProjectData {
     items: [],
     countdown: createDefaultCountdown(),
     library: createEmptyLibrary(),
-    aiPrompt: createDefaultAiPrompt()
+    aiPrompt: createDefaultAiPrompt(),
+    feature: createDefaultFeature()
   }
 }
 
@@ -85,7 +109,9 @@ export function createSlideFrame(
     subtitleOptions: [''],
     ...style,
     backgroundImage: null,
-    backgroundImageDisplayName: null
+    backgroundImageDisplayName: null,
+    bodyStyle: 'rotate',
+    aiKind: 'jokes'
   }
 }
 
@@ -120,4 +146,11 @@ export function cloneSlideshowItem(item: SlideshowItem): SlideshowItem {
     frames: item.frames.map((f) => ({ ...f, id: uuid(), subtitleOptions: [...f.subtitleOptions] })),
     music: item.music ? { ...item.music } : null
   }
+}
+
+/** Whether a feature movie is set up, so the show hands off to it at showtime. */
+export function hasFeatureMovie(feature: FeatureConfig): boolean {
+  if (feature.source === 'file') return feature.filePath.trim() !== ''
+  if (feature.source === 'stream') return feature.streamUrl.trim() !== ''
+  return false
 }

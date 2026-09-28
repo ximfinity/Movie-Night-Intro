@@ -4,11 +4,12 @@ import { isPristineDefaultFrame } from '@shared/factory'
 import { buildSubtitlePrompt, normalizeTitleKey } from '@shared/aiPrompt'
 import { useProject } from '../state/useProject'
 
-/** Text slides in a group worth asking an AI about (titled, and not the untouched
- * placeholder a new group starts with). */
+/** Text slides in a group worth asking an AI about (titled, not the untouched
+ * placeholder a new group starts with, and not a list such as a price menu). */
 export function promptableFrames(item: SlideshowItem): SlideFrame[] {
   return item.frames.filter(
-    (f) => f.content === 'text' && f.title.trim() && !isPristineDefaultFrame(f)
+    (f) =>
+      f.content === 'text' && f.bodyStyle !== 'list' && f.title.trim() && !isPristineDefaultFrame(f)
   )
 }
 
@@ -24,7 +25,11 @@ export function usePromptCopier(): (
     const frames = onlyFrame ? [onlyFrame] : promptableFrames(item)
     const known = new Set(frames.map((f) => normalizeTitleKey(f.title)))
     const titles = [
-      ...frames.map((f) => ({ title: f.title, existing: f.subtitleOptions })),
+      ...frames.map((f) => ({
+        title: f.title,
+        existing: f.subtitleOptions,
+        trivia: f.aiKind === 'trivia'
+      })),
       ...extraTitles
         .filter((t) => !known.has(normalizeTitleKey(t)))
         .map((t) => ({ title: t, existing: [] }))

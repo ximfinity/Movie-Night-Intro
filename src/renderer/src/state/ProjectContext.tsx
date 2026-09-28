@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid'
 import type {
   AiPromptSettings,
   CountdownConfig,
+  FeatureConfig,
   ImportedMediaFile,
   MediaKind,
   OpenProjectResult,
@@ -28,8 +29,10 @@ import {
   ProjectContext,
   type ProjectContextValue,
   type ProjectState,
-  type SubtitlePlanEntry
+  type SubtitlePlanEntry,
+  type WizardPlan
 } from './context'
+import { buildShow } from '@shared/builtinTemplates'
 
 const HISTORY_LIMIT = 100
 /** Edits to the same field closer together than this collapse into one undo step. */
@@ -46,7 +49,8 @@ const EMPTY_STATE: ProjectState = {
   past: [],
   future: [],
   lastEdit: { key: null, at: 0 },
-  busyMessage: null
+  busyMessage: null,
+  notice: null
 }
 
 function loadedState(dir: string, fileName: string, project: ProjectData): ProjectState {
@@ -150,6 +154,94 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       window.alert(`Couldn't create the project.\n\n${userMessage(err)}`)
     }
   }, [finishOpening])
+
+  const createShowFromWizard = useCallback(
+    async (plan: WizardPlan): Promise<boolean> => {
+      try {
+        const choice = await window.api.selectNewProjectFolder()
+        if (!choice) return false
+        if (choice.kind === 'open') {
+          await finishOpening(choice)
+          return true
+        }
+        const dir = choice.dir
+        const name = dir.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? 'Movie Night'
+        const built = buildShow(plan.theme, plan.sections, plan.details)
+        const base = createEmptyProject(name)
+        const images = [...base.library.images]
+
+        const fundraiser = built.bySection.fundraiser
+        if (fundraiser && plan.donationUrl.trim()) {
+          const qr = await window.api.makeQrSlide(dir, plan.donationUrl)
+          images.push(qr)
+          const look = slideStyleOf(fundraiser.frames[0])
+          fundraiser.frames.push(
+            {
+              ...createSlideFrame('text', look, 'Scan to Donate'),
+              subtitleOptions: [
+                "Point your phone's camera at the next screen",
+                'Every gift helps our students',
+                'Quick, easy and oh so appreciated'
+              ]
+            },
+            {
+              ...createSlideFrame('image', { ...look, durationSec: 15 }),
+              backgroundImage: qr.fileName,
+              backgroundImageDisplayName: qr.displayName
+            }
+          )
+        }
+
+        const by = built.bySection
+        const movieTitle = plan.details.movieTitle.trim()
+        const project: ProjectData = {
+          ...base,
+          items: built.items,
+          library: { ...base.library, images },
+          aiPrompt: built.aiPrompt,
+          countdown: {
+            ...base.countdown,
+            enabled: true,
+            mode: 'clock',
+            targetTime: plan.showtime,
+            loopPlaylistUntilShowtime: true
+          },
+          feature: {
+            ...base.feature,
+            title: movieTitle,
+            source: plan.movie.source,
+            filePath: plan.movie.filePath,
+            streamUrl: plan.movie.streamUrl,
+            startMode: plan.startMode,
+            holdMessage: built.holdMessage,
+            endMessage: built.endMessage,
+            holdSlideGroupId: (by.sponsors ?? by.snacks ?? by.concessions)?.id ?? null,
+            endSlideGroupId:
+              (plan.theme === 'pta' ? by.sponsors : plan.theme === 'birthday' ? by.welcome : null)
+                ?.id ?? null
+          }
+        }
+        await window.api.saveProject(dir, PROJECT_FILE_NAME, project)
+        const landOn = by.feature ?? built.items[0]
+        setState({
+          ...loadedState(dir, PROJECT_FILE_NAME, project),
+          selectedItemId: landOn?.id ?? null,
+          notice: by.feature
+            ? `Your show is ready! Every slide already has lines. To add jokes and real trivia about ${movieTitle || 'your movie'}, click ✨ Quick build & AI below and copy the prompt into any AI chat.`
+            : 'Your show is ready! Every slide already has lines; edit anything you like.'
+        })
+        return true
+      } catch (err) {
+        window.alert(`Couldn't create the show.\n\n${userMessage(err)}`)
+        return false
+      }
+    },
+    [finishOpening]
+  )
+
+  const dismissNotice = useCallback(() => {
+    setState((s) => ({ ...s, notice: null }))
+  }, [])
 
   const openProject = useCallback(async () => {
     try {
@@ -274,6 +366,16 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       commit(
         (p) => ({ ...p, countdown: { ...p.countdown, ...patch } }),
         `countdown:${Object.keys(patch).sort().join(',')}`
+      )
+    },
+    [commit]
+  )
+
+  const updateFeature = useCallback(
+    (patch: Partial<FeatureConfig>) => {
+      commit(
+        (p) => ({ ...p, feature: { ...p.feature, ...patch } }),
+        `feature:${Object.keys(patch).sort().join(',')}`
       )
     },
     [commit]
@@ -576,10 +678,13 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       copiedFrame: state.copiedFrame,
       missingMedia: state.missingMedia,
       busyMessage: state.busyMessage,
+      notice: state.notice,
       dirty,
       canUndo: state.past.length > 0,
       canRedo: state.future.length > 0,
       startNewProject,
+      createShowFromWizard,
+      dismissNotice,
       openProject,
       saveProject,
       closeProject,
@@ -592,6 +697,7 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       reorderItems,
       selectItem,
       updateCountdown,
+      updateFeature,
       importToLibrary,
       removeFromLibrary,
       addFrame,
@@ -612,6 +718,8 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       state,
       dirty,
       startNewProject,
+      createShowFromWizard,
+      dismissNotice,
       openProject,
       saveProject,
       closeProject,
@@ -624,6 +732,7 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       reorderItems,
       selectItem,
       updateCountdown,
+      updateFeature,
       importToLibrary,
       removeFromLibrary,
       addFrame,

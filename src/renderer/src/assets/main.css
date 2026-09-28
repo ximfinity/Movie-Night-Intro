@@ -59,6 +59,8 @@
 
 input[type='text'],
 input[type='number'],
+input[type='url'],
+input[type='time'],
 textarea,
 select {
   background: var(--bg-1);
@@ -73,10 +75,16 @@ select {
 
 input[type='text']:focus,
 input[type='number']:focus,
+input[type='url']:focus,
+input[type='time']:focus,
 textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+input[type='time'] {
+  color-scheme: dark;
 }
 
 input[type='range'] {
@@ -240,4 +248,94 @@ div.field .field-label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Phone remote dialog */
+
+.remote-btn {
+  position: relative;
+}
+
+.remote-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: #3ecf6b;
+  box-shadow: 0 0 6px #3ecf6b;
+}
+
+.remote-connect {
+  margin: 14px 0;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+}
+
+.remote-step {
+  font-size: 13px;
+  color: var(--text-1);
+  margin: 4px 0 8px;
+}
+
+.remote-url {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent-strong);
+  margin-bottom: 10px;
+  user-select: all;
+}
+
+.remote-pin {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  margin-bottom: 12px;
+}
+
+/* Template picker: built-in theme nights */
+
+.template-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.template-tabs .btn {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.template-tab-active {
+  color: var(--accent-strong);
+  box-shadow: var(--accent) 0 -2px 0 inset;
+}
+
+.builtin-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.builtin-theme {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+.builtin-theme-active {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.builtin-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  border: 1px solid var(--border);
 }

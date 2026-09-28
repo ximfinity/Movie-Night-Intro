@@ -145,13 +145,49 @@
   text-shadow: 0 0.4cqh 2.8cqh rgba(0, 0, 0, 0.35);
 }
 
-
 .slide-subtitle {
   margin-top: 2.2cqh;
   font-size: 1.6cqw;
   font-weight: 400;
   opacity: 0.88;
   line-height: 1.5;
+}
+
+/* List-style slide body: menus, sponsor lists, schedules */
+
+.slide-list {
+  list-style: none;
+  margin: 3cqh auto 0;
+  padding: 0;
+  min-width: 36cqw;
+  max-width: 64cqw;
+  text-align: left;
+}
+
+.slide-list-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1.2cqw;
+  font-size: 2.1cqw;
+  line-height: 1.35;
+  padding: 0.5cqh 0;
+}
+
+.slide-list-row:not(.slide-list-priced) {
+  justify-content: center;
+  text-align: center;
+}
+
+.slide-list-leader {
+  flex: 1;
+  border-bottom: 0.25cqw dotted currentColor;
+  opacity: 0.45;
+  transform: translateY(-0.5cqh);
+}
+
+.slide-list-value {
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* Countdown overlay — persistent widget layered on top of whatever is playing */

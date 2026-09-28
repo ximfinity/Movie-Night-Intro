@@ -1,11 +1,126 @@
 import { useEffect, useState } from 'react'
 import type { TemplateSummary } from '@shared/types'
+import {
+  EMPTY_DETAILS,
+  SECTIONS,
+  THEME_NIGHTS,
+  buildSection,
+  findThemeNight,
+  type SectionId,
+  type ThemeNightId
+} from '@shared/builtinTemplates'
+import { findSlideTheme } from '@shared/slideThemes'
 import { useProject } from '../state/useProject'
 import { userMessage } from '../lib/errors'
 import Modal from './Modal'
 
-/** Browse the shared template library and insert a slide group into this project. */
+/** Built-in theme-night groups, ready to insert (lines already written). */
+function BuiltinTemplates({ onInserted }: { onInserted: () => void }): React.JSX.Element {
+  const { project, addItem } = useProject()
+  const [themeId, setThemeId] = useState<ThemeNightId>('classic')
+  const theme = findThemeNight(themeId)
+
+  function insert(section: SectionId): void {
+    const groups = project!.items.filter((it) => it.type === 'slideshow').length
+    const item = buildSection(
+      section,
+      themeId,
+      { ...EMPTY_DETAILS, movieTitle: project!.feature.title },
+      groups
+    )
+    if (!item) return
+    addItem(item)
+    onInserted()
+  }
+
+  return (
+    <div>
+      <div className="builtin-themes" role="radiogroup" aria-label="Theme night">
+        {THEME_NIGHTS.map((n) => (
+          <button
+            key={n.id}
+            role="radio"
+            aria-checked={n.id === themeId}
+            className={`btn builtin-theme ${n.id === themeId ? 'builtin-theme-active' : ''}`}
+            onClick={() => setThemeId(n.id)}
+          >
+            {n.emoji} {n.label}
+          </button>
+        ))}
+      </div>
+      <ul className="template-list">
+        {theme.sections.map((id) => {
+          const preview = buildSection(id, themeId, {
+            ...EMPTY_DETAILS,
+            movieTitle: project!.feature.title
+          })
+          if (!preview) return null
+          return (
+            <li key={id} className="template-card">
+              <span
+                className="builtin-swatch"
+                style={{ background: findSlideTheme(preview.frames[0].theme).background }}
+              />
+              <div className="template-card-text">
+                <div className="template-card-name">{SECTIONS[id].label}</div>
+                <div className="template-card-meta">
+                  {preview.frames.length} slide{preview.frames.length === 1 ? '' : 's'} ·{' '}
+                  {SECTIONS[id].description}
+                </div>
+                <div className="template-card-sample">
+                  {preview.frames.map((f) => f.title).join(' · ')}
+                </div>
+              </div>
+              <button className="btn btn-primary" onClick={() => insert(id)}>
+                Insert
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      <p className="inspector-hint">
+        Every slide comes with lines already written; edit them, or add more with ✨ Quick build
+        &amp; AI. For a whole show at once (with a donation QR code), use ✨ New Show on the home
+        screen.
+      </p>
+    </div>
+  )
+}
+
+/** Built-in theme-night groups, plus the user's own template library. */
 export function TemplatePickerDialog({ onClose }: { onClose: () => void }): React.JSX.Element {
+  const [tab, setTab] = useState<'builtin' | 'mine'>('builtin')
+  return (
+    <Modal title="Insert a slide group" onClose={onClose} width={680}>
+      <div className="template-tabs" role="tablist">
+        <button
+          role="tab"
+          aria-selected={tab === 'builtin'}
+          className={`btn btn-ghost ${tab === 'builtin' ? 'template-tab-active' : ''}`}
+          onClick={() => setTab('builtin')}
+        >
+          ✨ Built-in
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'mine'}
+          className={`btn btn-ghost ${tab === 'mine' ? 'template-tab-active' : ''}`}
+          onClick={() => setTab('mine')}
+        >
+          📚 My templates
+        </button>
+      </div>
+      {tab === 'builtin' ? (
+        <BuiltinTemplates onInserted={onClose} />
+      ) : (
+        <MyTemplates onClose={onClose} />
+      )}
+    </Modal>
+  )
+}
+
+/** Browse the shared template library and insert a slide group into this project. */
+function MyTemplates({ onClose }: { onClose: () => void }): React.JSX.Element {
   const { insertTemplate } = useProject()
   const [templates, setTemplates] = useState<TemplateSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +155,7 @@ export function TemplatePickerDialog({ onClose }: { onClose: () => void }): Reac
   }
 
   return (
-    <Modal title="Insert a slide group from your templates" onClose={onClose} width={620}>
+    <>
       {error && <p className="inspector-hint">Couldn&apos;t read your templates: {error}</p>}
       {!error && templates === null && <p className="inspector-hint">Loading…</p>}
       {templates?.length === 0 && (
@@ -81,7 +196,7 @@ export function TemplatePickerDialog({ onClose }: { onClose: () => void }): Reac
           ))}
         </ul>
       )}
-    </Modal>
+    </>
   )
 }
 

@@ -1,14 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useProject } from '../state/useProject'
 import PlaylistPanel from '../components/PlaylistPanel'
 import InspectorPanel from '../components/inspectors/InspectorPanel'
 import { itemTitle } from '../lib/itemMeta'
+import { hasFeatureMovie } from '@shared/factory'
+import { useRemoteCommands, useRemoteState } from '../hooks/useRemote'
+import { RemoteButton } from '../components/RemoteDialog'
 import './EditorScreen.css'
 
 export default function EditorScreen({
-  onStartShow
+  onStartShow,
+  onResumeMovie
 }: {
   onStartShow: (startIndex?: number) => void
+  onResumeMovie: (atSec: number) => void
 }): React.JSX.Element {
   const {
     project,
@@ -18,6 +23,8 @@ export default function EditorScreen({
     closeProject,
     missingMedia,
     dismissMissingMedia,
+    notice,
+    dismissNotice,
     selectedItemId,
     busyMessage,
     undo,
@@ -50,15 +57,60 @@ export default function EditorScreen({
     return () => window.removeEventListener('keydown', handler)
   }, [saveProject, undo, redo])
 
+  // What the phone remote offers while editing: start the show, or resume a movie that was
+  // interrupted.
+  const [resumeAtSec, setResumeAtSec] = useState<number | null>(null)
+  const moviePath =
+    project?.feature.source === 'file' && project.feature.player === 'builtin'
+      ? project.feature.filePath
+      : ''
+  useEffect(() => {
+    let cancelled = false
+    const check = (): void => {
+      if (!moviePath) {
+        setResumeAtSec(null)
+        return
+      }
+      window.api.getResumePoint(moviePath).then((point) => {
+        if (cancelled) return
+        const recent = point && Date.now() - Date.parse(point.savedAt) < 48 * 3600_000
+        setResumeAtSec(recent && point.positionSec > 30 ? point.positionSec : null)
+      })
+    }
+    check()
+    return () => {
+      cancelled = true
+    }
+  }, [moviePath])
+
+  const canStartShow = !!project && (project.items.length > 0 || hasFeatureMovie(project.feature))
+  useRemoteState(() => ({
+    phase: 'editor',
+    projectName: project?.name ?? '',
+    movieTitle: project?.feature.title ?? '',
+    canStart: canStartShow,
+    resumeAtSec,
+    hasFeature: !!project && hasFeatureMovie(project.feature)
+  }))
+  useRemoteCommands(({ cmd }) => {
+    if (cmd === 'startShow' && canStartShow) handleStartShow()
+    else if (cmd === 'resumeMovie' && resumeAtSec !== null) handleResumeMovie(resumeAtSec)
+  })
+
   if (!project) return <></>
 
-  const canStart = project.items.length > 0
+  const canStart = project.items.length > 0 || hasFeatureMovie(project.feature)
   const selectedIndex = project.items.findIndex((it) => it.id === selectedItemId)
   const selectedItem = selectedIndex === -1 ? null : project.items[selectedIndex]
 
   async function handleStartShow(startIndex?: number): Promise<void> {
     if (dirty) await saveProject()
     onStartShow(startIndex)
+  }
+
+  async function handleResumeMovie(atSec: number): Promise<void> {
+    if (dirty) await saveProject()
+    onResumeMovie(atSec)
   }
 
   function handleClose(): void {
@@ -97,6 +149,7 @@ export default function EditorScreen({
           >
             ↷
           </button>
+          <RemoteButton />
           <button className="btn" onClick={saveProject} disabled={!dirty}>
             Save
           </button>
@@ -126,6 +179,14 @@ export default function EditorScreen({
           </button>
         </div>
       </header>
+      {notice && (
+        <div className="missing-media-banner notice-banner" role="status">
+          <span>{notice}</span>
+          <button className="btn btn-ghost" onClick={dismissNotice}>
+            Got it
+          </button>
+        </div>
+      )}
       {missingMedia.length > 0 && (
         <div className="missing-media-banner">
           <span>
@@ -140,7 +201,7 @@ export default function EditorScreen({
       )}
       <div className="editor-body">
         <PlaylistPanel />
-        <InspectorPanel />
+        <InspectorPanel onResumeMovie={handleResumeMovie} />
       </div>
       {busyMessage && (
         <div className="busy-overlay" role="status">

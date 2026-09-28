@@ -13,7 +13,9 @@ describe('normalizeProject', () => {
 
   it('fills defaults for a minimal project', () => {
     const p = normalizeProject({ items: [] })
-    expect(p.formatVersion).toBe(4)
+    expect(p.formatVersion).toBe(5)
+    expect(p.feature.source).toBe('none')
+    expect(p.feature.holdMessage).toBe('The movie will be starting shortly')
     expect(p.library).toEqual({ videos: [], audio: [], images: [] })
     expect(p.aiPrompt).toEqual({ event: '', tone: 'silly and punny', perTitle: 5 })
     expect(p.countdown.mode).toBe('clock')
@@ -60,6 +62,35 @@ describe('normalizeProject', () => {
     expect(dup.frames[0].id).not.toBe(dup.frames[1].id)
   })
 
+  it('repairs the feature settings and new slide fields', () => {
+    const p = normalizeProject({
+      items: [{ type: 'slideshow', frames: [{ bodyStyle: 'list', aiKind: 'trivia' }, {}] }],
+      feature: {
+        source: 'file',
+        filePath: 'D:\\Movies\\Goonies.mkv',
+        player: 'vlc',
+        startMode: 'auto',
+        holdSec: 9999,
+        posterImage: '',
+        holdMusicVolume: 2
+      }
+    })
+    const frames = (p.items[0] as SlideshowItem).frames
+    expect(frames[0].bodyStyle).toBe('list')
+    expect(frames[0].aiKind).toBe('trivia')
+    expect(frames[1].bodyStyle).toBe('rotate')
+    expect(frames[1].aiKind).toBe('jokes')
+    expect(p.feature).toMatchObject({
+      source: 'file',
+      filePath: 'D:\\Movies\\Goonies.mkv',
+      player: 'builtin',
+      startMode: 'auto',
+      holdSec: 600,
+      posterImage: null,
+      holdMusicVolume: 1
+    })
+  })
+
   it('drops music with no file and clamps music settings', () => {
     const p = normalizeProject({
       items: [
@@ -89,12 +120,20 @@ describe('collectMediaRefs', () => {
           music: { kind: 'video', fileName: 'popup.mp4' }
         }
       ],
-      library: { videos: [{ fileName: 'clip.mp4', displayName: 'Clip' }] }
+      library: { videos: [{ fileName: 'clip.mp4', displayName: 'Clip' }] },
+      feature: { posterImage: 'goonies.jpg', holdMusic: 'lobby.mp3', introClip: 'thx.mp4' }
     })
     expect(
       collectMediaRefs(p)
         .map((r) => `${r.kind}:${r.fileName}`)
         .sort()
-    ).toEqual(['image:poster.png', 'video:clip.mp4', 'video:popup.mp4'])
+    ).toEqual([
+      'audio:lobby.mp3',
+      'image:goonies.jpg',
+      'image:poster.png',
+      'video:clip.mp4',
+      'video:popup.mp4',
+      'video:thx.mp4'
+    ])
   })
 })

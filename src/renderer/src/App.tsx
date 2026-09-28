@@ -13,6 +13,7 @@ function Shell(): React.JSX.Element {
   const { dir, project } = useProject()
   const [view, setView] = useState<View>('editor')
   const [startIndex, setStartIndex] = useState(0)
+  const [resumeAtSec, setResumeAtSec] = useState<number | undefined>(undefined)
 
   if (!dir || !project) {
     return <HomeScreen />
@@ -30,7 +31,11 @@ function Shell(): React.JSX.Element {
           />
         )}
       >
-        <ShowPlayer startIndex={startIndex} onExit={() => setView('editor')} />
+        <ShowPlayer
+          startIndex={startIndex}
+          resumeAtSec={resumeAtSec}
+          onExit={() => setView('editor')}
+        />
       </ErrorBoundary>
     )
   }
@@ -49,6 +54,11 @@ function Shell(): React.JSX.Element {
       <EditorScreen
         onStartShow={(index) => {
           setStartIndex(index ?? 0)
+          setResumeAtSec(undefined)
+          setView('show')
+        }}
+        onResumeMovie={(atSec) => {
+          setResumeAtSec(atSec)
           setView('show')
         }}
       />

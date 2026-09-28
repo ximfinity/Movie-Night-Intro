@@ -47,7 +47,8 @@ export default function SlideFrameView({
 
   // Picked once per mount (i.e. fresh each time this frame is actually shown — including
   // on a restart or manual re-visit — but stable for as long as it stays on screen).
-  const [subtitle] = useState(() => pickSubtitle(frame, preview))
+  const listStyle = frame.bodyStyle === 'list'
+  const [subtitle] = useState(() => (listStyle ? '' : pickSubtitle(frame, preview)))
   const [theme] = useState(() => pickTheme(frame, preview))
   const typewriter = frame.content === 'text' && frame.textAnimation === 'typewriter'
   const [typedChars, setTypedChars] = useState(typewriter ? 0 : Infinity)
@@ -71,7 +72,7 @@ export default function SlideFrameView({
   }, [bgImageUrl])
 
   const titleRef = useRef<HTMLHeadingElement>(null)
-  const subtitleRef = useRef<HTMLParagraphElement>(null)
+  const subtitleRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (frame.content !== 'text') return undefined
@@ -96,9 +97,7 @@ export default function SlideFrameView({
       return () => clearInterval(id)
     }
 
-    const targets = [title, subtitleEl].filter(
-      (n): n is HTMLHeadingElement | HTMLParagraphElement => Boolean(n)
-    )
+    const targets = [title, subtitleEl].filter((n): n is HTMLElement => Boolean(n))
     if (targets.length === 0) return undefined
 
     // Percent offsets so the motion scales with the slide (fullscreen or preview).
@@ -165,12 +164,53 @@ export default function SlideFrameView({
         >
           {typewriter ? frame.title.slice(0, typedChars) : frame.title}
         </h1>
-        {subtitle && (
-          <p ref={subtitleRef} className="slide-subtitle">
-            {subtitle}
-          </p>
+        {listStyle ? (
+          <SlideList lines={frame.subtitleOptions} listRef={subtitleRef} />
+        ) : (
+          subtitle && (
+            <p
+              ref={subtitleRef as React.RefObject<HTMLParagraphElement>}
+              className="slide-subtitle"
+            >
+              {subtitle}
+            </p>
+          )
         )}
       </div>
     </div>
+  )
+}
+
+/** Every line at once: a price menu, sponsor list or schedule. "Popcorn | $2" becomes two
+ * columns joined by a dotted leader. */
+function SlideList({
+  lines,
+  listRef
+}: {
+  lines: string[]
+  listRef: React.RefObject<HTMLElement | null>
+}): React.JSX.Element | null {
+  const rows = lines.map((l) => l.trim()).filter(Boolean)
+  if (rows.length === 0) return null
+  return (
+    <ul ref={listRef as React.RefObject<HTMLUListElement>} className="slide-list">
+      {rows.map((row, i) => {
+        const bar = row.indexOf('|')
+        if (bar === -1) {
+          return (
+            <li key={i} className="slide-list-row">
+              <span className="slide-list-name">{row}</span>
+            </li>
+          )
+        }
+        return (
+          <li key={i} className="slide-list-row slide-list-priced">
+            <span className="slide-list-name">{row.slice(0, bar).trim()}</span>
+            <span className="slide-list-leader" />
+            <span className="slide-list-value">{row.slice(bar + 1).trim()}</span>
+          </li>
+        )
+      })}
+    </ul>
   )
 }

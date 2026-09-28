@@ -590,11 +590,49 @@ function SubtitleEditor({
   const [copied, setCopied] = useState(false)
   const item = project!.items.find((it) => it.id === itemId)
   const options = frame.subtitleOptions
+  const isList = frame.bodyStyle === 'list'
   return (
     <div className="field">
+      <div className="body-style-row">
+        <div className="body-style-toggle" role="radiogroup" aria-label="How the lines show">
+          <button
+            role="radio"
+            aria-checked={!isList}
+            className={`btn btn-ghost ${!isList ? 'body-style-active' : ''}`}
+            onClick={() => patch({ bodyStyle: 'rotate' })}
+            title="Show one line under the title, a different one each time"
+          >
+            One line at a time
+          </button>
+          <button
+            role="radio"
+            aria-checked={isList}
+            className={`btn btn-ghost ${isList ? 'body-style-active' : ''}`}
+            onClick={() => patch({ bodyStyle: 'list' })}
+            title="Show every line at once: a menu, sponsor list or schedule"
+          >
+            All lines as a list
+          </button>
+        </div>
+        {!isList && (
+          <select
+            className="ai-kind-select"
+            value={frame.aiKind}
+            title="What the AI prompt asks for on this slide"
+            onChange={(e) => patch({ aiKind: e.target.value as SlideFrame['aiKind'] })}
+          >
+            <option value="jokes">AI writes: silly lines</option>
+            <option value="trivia">AI writes: movie trivia</option>
+          </select>
+        )}
+      </div>
       <span className="field-label">
-        Subtitle{' '}
-        {options.length > 1 && <span>one of {options.length} picked at random each time</span>}
+        {isList ? 'Lines' : 'Subtitle'}{' '}
+        {isList ? (
+          <span>“Popcorn | $2” shows as a price column</span>
+        ) : (
+          options.length > 1 && <span>one of {options.length} picked at random each time</span>
+        )}
       </span>
       {options.map((option, i) => (
         <div className="subtitle-option" key={i}>
@@ -603,7 +641,11 @@ function SubtitleEditor({
               rows={1}
               value={option}
               placeholder={
-                options.length > 1 ? `Variation ${i + 1}` : 'Optional line under the title'
+                isList
+                  ? 'e.g. Popcorn | $2'
+                  : options.length > 1
+                    ? `Variation ${i + 1}`
+                    : 'Optional line under the title'
               }
               onChange={(e) => {
                 const next = [...options]
@@ -620,7 +662,7 @@ function SubtitleEditor({
               ✕
             </button>
           </div>
-          {option.length > SUBTITLE_MAX_CHARS && (
+          {!isList && option.length > SUBTITLE_MAX_CHARS && (
             <span className="char-warning">
               {option.length}/{SUBTITLE_MAX_CHARS} characters — may wrap onto a second line
             </span>
@@ -632,28 +674,32 @@ function SubtitleEditor({
           className="btn btn-ghost"
           onClick={() => patch({ subtitleOptions: [...options, ''] })}
         >
-          + Add variation
+          {isList ? '+ Add line' : '+ Add variation'}
         </button>
-        <button
-          className="btn btn-ghost"
-          disabled={!frame.title.trim() || item?.type !== 'slideshow'}
-          title="Copy a ready-made prompt for this title — paste it into any AI chat"
-          onClick={() => {
-            if (item?.type !== 'slideshow') return
-            copyPrompt(item, frame)
-            setCopied(true)
-            setTimeout(() => setCopied(false), 3000)
-          }}
-        >
-          {copied ? '✓ Prompt copied' : '📋 Copy AI prompt'}
-        </button>
-        <button
-          className="btn btn-ghost"
-          onClick={onOpenAi}
-          title="Paste an AI chat's reply (or any list of lines) as variations"
-        >
-          📥 Paste AI reply
-        </button>
+        {!isList && (
+          <>
+            <button
+              className="btn btn-ghost"
+              disabled={!frame.title.trim() || item?.type !== 'slideshow'}
+              title="Copy a ready-made prompt for this title — paste it into any AI chat"
+              onClick={() => {
+                if (item?.type !== 'slideshow') return
+                copyPrompt(item, frame)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 3000)
+              }}
+            >
+              {copied ? '✓ Prompt copied' : '📋 Copy AI prompt'}
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={onOpenAi}
+              title="Paste an AI chat's reply (or any list of lines) as variations"
+            >
+              📥 Paste AI reply
+            </button>
+          </>
+        )}
       </div>
     </div>
   )

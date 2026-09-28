@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at 50% 0%, #1c2133 0%, var(--bg-0) 60%);
+  background: radial-gradient(circle at 50% 0%, #2a1016 0%, var(--bg-0) 62%);
   overflow: hidden;
 }
 
@@ -15,7 +15,7 @@
   height: 700px;
   border-radius: 50%;
   top: -320px;
-  background: radial-gradient(circle, rgba(242, 184, 75, 0.18), transparent 70%);
+  background: radial-gradient(circle, rgba(215, 38, 61, 0.22), transparent 70%);
   animation: drift 12s ease-in-out infinite alternate;
 }
 
@@ -53,17 +53,20 @@
   }
 }
 
-.home-badge {
-  font-size: 48px;
-  margin-bottom: 12px;
+.home-logo {
+  width: 112px;
+  height: 112px;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
 }
 
 .home-card h1 {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin-bottom: 12px;
-  background: linear-gradient(135deg, var(--accent-strong), #ffe6ad);
+  background: linear-gradient(180deg, #ffe08a, #f2b84b 60%, #c98a1e);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -76,9 +79,29 @@
   margin-bottom: 28px;
 }
 
+.home-wizard-btn {
+  width: 100%;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 20px;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.home-btn-hint {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
 .home-actions {
   display: flex;
   gap: 12px;
+  justify-content: center;
+}
+
+.home-actions .btn {
+  flex: 1;
   justify-content: center;
 }
 

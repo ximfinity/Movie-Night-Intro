@@ -6,6 +6,8 @@ export interface PromptTitle {
   title: string
   /** Subtitles the slide already has, so the AI doesn't repeat them. */
   existing: string[]
+  /** Ask for true fun facts about tonight's movie instead of jokes. */
+  trivia?: boolean
 }
 
 export interface PromptOptions {
@@ -21,6 +23,9 @@ export function buildSubtitlePrompt(opts: PromptOptions): string {
   const used = [
     ...new Set(opts.titles.flatMap((t) => t.existing.map((s) => s.trim())).filter(Boolean))
   ]
+  const triviaTitles = opts.titles
+    .filter((t) => t.trivia && t.title.trim())
+    .map((t) => t.title.trim())
   const exampleTitles = titles.length > 0 ? titles.slice(0, 2) : ['Silence Your Phones']
   const example = exampleTitles
     .map((t) => `TITLE: ${t}\nfirst subtitle\nsecond subtitle`)
@@ -45,6 +50,13 @@ export function buildSubtitlePrompt(opts: PromptOptions): string {
     `- Don't reuse the title's wording, and don't repeat anything under "Already used".`,
     '- No emojis, hashtags, numbering, bullets or quotation marks.',
     "- No spoilers about tonight's movie.",
+    ...(triviaTitles.length > 0
+      ? [
+          '',
+          "These titles are trivia slides: instead of jokes, write true, verifiable fun facts about tonight's movie (behind the scenes, the cast, how it was made), same length limit, no plot spoilers:",
+          ...triviaTitles.map((t) => `TITLE: ${t}`)
+        ]
+      : []),
     '',
     'Already used (do not repeat):',
     ...(used.length > 0 ? used : ['none']),
