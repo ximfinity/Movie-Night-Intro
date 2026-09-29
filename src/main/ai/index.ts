@@ -4,6 +4,7 @@ import fs from 'fs/promises'
 import {
   AI_PROVIDERS,
   describeHttpError,
+  retryDelayMs,
   findProvider,
   geminiImageRequest,
   geminiTextRequest,
@@ -162,18 +163,25 @@ async function callJson<T>(
 ): Promise<T> {
   checkUrl(req.url)
   let res: Response
-  try {
-    res = await fetch(req.url, { ...req.init, signal: AbortSignal.timeout(timeoutMs) })
-  } catch (err) {
-    const timedOut = (err as Error)?.name === 'TimeoutError'
-    throw new Error(
-      timedOut
-        ? `${label} took too long to answer. Try again.`
-        : `Couldn't reach ${label}. Is this PC online, and is the address right?`
-    )
+  let body: string
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await fetch(req.url, { ...req.init, signal: AbortSignal.timeout(timeoutMs) })
+    } catch (err) {
+      const timedOut = (err as Error)?.name === 'TimeoutError'
+      throw new Error(
+        timedOut
+          ? `${label} took too long to answer. Try again.`
+          : `Couldn't reach ${label}. Is this PC online, and is the address right?`
+      )
+    }
+    body = await res.text()
+    if (res.ok) break
+    // Busy services ("high demand", 503) usually recover within seconds: retry quietly.
+    const wait = retryDelayMs(res.status, res.headers.get('retry-after'), attempt)
+    if (wait === null) throw new Error(describeHttpError(res.status, body, label))
+    await new Promise((r) => setTimeout(r, wait))
   }
-  const body = await res.text()
-  if (!res.ok) throw new Error(describeHttpError(res.status, body, label))
   let json: unknown
   try {
     json = JSON.parse(body)

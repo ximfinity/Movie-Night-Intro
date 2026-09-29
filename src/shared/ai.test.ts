@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   aiReady,
   describeHttpError,
+  retryDelayMs,
   geminiImageRequest,
   geminiTextRequest,
   modelListRequest,
@@ -144,7 +145,31 @@ describe('model lists', () => {
   })
 })
 
+describe('retryDelayMs', () => {
+  it('retries busy services twice, then gives up', () => {
+    expect(retryDelayMs(503, null, 0)).toBe(2000)
+    expect(retryDelayMs(503, null, 1)).toBe(5000)
+    expect(retryDelayMs(503, null, 2)).toBeNull()
+    expect(retryDelayMs(529, '3', 0)).toBe(3000)
+    expect(retryDelayMs(503, '120', 0)).toBe(10_000)
+  })
+
+  it('retries a rate limit only when it clears within seconds, and never bad requests', () => {
+    expect(retryDelayMs(429, '2', 0)).toBe(2000)
+    expect(retryDelayMs(429, null, 0)).toBeNull()
+    expect(retryDelayMs(429, '60', 0)).toBeNull()
+    expect(retryDelayMs(401, null, 0)).toBeNull()
+    expect(retryDelayMs(400, null, 0)).toBeNull()
+  })
+})
+
 describe('describeHttpError', () => {
+  it('says an overloaded model is temporary and that the setup is fine', () => {
+    expect(describeHttpError(503, '{"error":{"message":"high demand"}}', 'Google Gemini')).toMatch(
+      /^Google Gemini's model is overloaded right now\. Your key and settings are fine/
+    )
+  })
+
   it('explains common failures in plain words', () => {
     expect(describeHttpError(401, '{"error":{"message":"bad key"}}', 'OpenAI')).toBe(
       "OpenAI didn't accept the API key.\n\nbad key"

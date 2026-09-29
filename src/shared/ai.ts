@@ -339,6 +339,27 @@ export function parseModelList(
     .sort()
 }
 
+/** How long to wait before retrying a failed AI call, or null to give up. Busy or
+ * briefly failing services (5xx, "overloaded") get two quick retries; a rate limit is only
+ * retried when the service says it will clear within seconds. Honors Retry-After. */
+export function retryDelayMs(
+  status: number,
+  retryAfter: string | null,
+  attempt: number
+): number | null {
+  const MAX_RETRIES = 2
+  if (attempt >= MAX_RETRIES) return null
+  const hinted =
+    retryAfter !== null && /^\d+(\.\d+)?$/.test(retryAfter.trim())
+      ? Number(retryAfter) * 1000
+      : null
+  if (status === 429) return hinted !== null && hinted <= 10_000 ? Math.max(hinted, 500) : null
+  if ([500, 502, 503, 504, 529].includes(status)) {
+    return Math.min(hinted ?? [2000, 5000][attempt], 10_000)
+  }
+  return null
+}
+
 /** A readable message for a failed HTTP call to an AI service. */
 export function describeHttpError(status: number, body: string, providerLabel: string): string {
   let detail = ''
@@ -355,8 +376,10 @@ export function describeHttpError(status: number, body: string, providerLabel: s
         ? `${providerLabel} doesn't know that model (or address). Try "Load models".`
         : status === 429
           ? `${providerLabel} says you're sending too many requests or you're out of credit.`
-          : status >= 500
-            ? `${providerLabel} is having trouble right now. Try again in a minute.`
-            : `${providerLabel} couldn't do that (error ${status}).`
+          : status === 503 || status === 529
+            ? `${providerLabel}'s model is overloaded right now. Your key and settings are fine: try again in a minute, or pick another model with "Load models".`
+            : status >= 500
+              ? `${providerLabel} is having trouble right now. Try again in a minute.`
+              : `${providerLabel} couldn't do that (error ${status}).`
   return detail ? `${reason}\n\n${detail}` : reason
 }
