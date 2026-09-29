@@ -18,6 +18,7 @@ import { mediaRelPath } from '../shared/paths'
 import { deleteTemplate, insertTemplate, listTemplates, saveTemplate } from './templates'
 import { registerFeatureHandlers } from './feature'
 import { registerQrHandlers } from './qr'
+import { initAi } from './ai'
 import { initRemote, shutdownRemote } from './remote'
 
 let mainWindow: BrowserWindow | null = null
@@ -292,6 +293,44 @@ function registerIpcHandlers(): void {
     }
   )
 
+  /** Saves a picture made in the app (an AI image, a rendered meme) into the project. */
+  ipcMain.handle(
+    'media:saveImageData',
+    async (
+      _evt,
+      dir: string,
+      baseName: string,
+      mimeType: string,
+      base64: string
+    ): Promise<ImportedMediaFile> => {
+      const ext = mimeType === 'image/jpeg' ? '.jpg' : mimeType === 'image/webp' ? '.webp' : '.png'
+      const safeBase =
+        String(baseName ?? '')
+          .replace(/[^\w\- ]+/g, '')
+          .trim()
+          .slice(0, 40) || 'image'
+      const destDir = join(dir, mediaRelPath('image', ''))
+      await fs.mkdir(destDir, { recursive: true })
+      const fileName = await uniqueDestName(destDir, `${safeBase}${ext}`)
+      await fs.writeFile(join(destDir, fileName), Buffer.from(String(base64), 'base64'))
+      return { fileName, displayName: fileName }
+    }
+  )
+
+  /** A project image as a data: URL, so the meme maker's canvas can use (and export) it. */
+  ipcMain.handle(
+    'media:readImageDataUrl',
+    async (_evt, dir: string, fileName: string): Promise<string> => {
+      if (!isPlainFileName(fileName)) throw new Error('Bad file name.')
+      const path = join(dir, mediaRelPath('image', fileName))
+      const stat = await fs.stat(path)
+      if (stat.size > 40 * 1024 * 1024) throw new Error('That picture is too large.')
+      const ext = extname(fileName).slice(1).toLowerCase()
+      const mime = ext === 'jpg' ? 'jpeg' : ext
+      return `data:image/${mime};base64,${(await fs.readFile(path)).toString('base64')}`
+    }
+  )
+
   ipcMain.handle(
     'media:checkExists',
     async (_evt, dir: string, refs: MediaRef[]): Promise<MediaRef[]> => {
@@ -329,6 +368,7 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   registerFeatureHandlers(() => mainWindow)
   registerQrHandlers()
+  initAi().catch((err) => console.error('AI settings failed to load:', err))
   createWindow()
   initRemote(() => mainWindow).catch((err) => console.error('Phone remote failed to start:', err))
 

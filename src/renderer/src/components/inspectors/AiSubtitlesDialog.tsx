@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SlideFrame, SlideshowItem } from '@shared/types'
 import { SUBTITLE_MAX_CHARS } from '@shared/types'
 import {
@@ -10,7 +10,11 @@ import {
 import { useProject } from '../../state/useProject'
 import { frameLabel } from '../../lib/itemMeta'
 import Modal from '../Modal'
-import { promptableFrames, usePromptCopier } from '../../hooks/usePromptCopier'
+import { promptableFrames, usePromptCopier, useSubtitlePrompt } from '../../hooks/usePromptCopier'
+import { aiReady, findProvider } from '@shared/ai'
+import { useAiConfig } from '../../lib/aiConfig'
+import { userMessage } from '../../lib/errors'
+import AiSettingsDialog from '../AiSettingsDialog'
 
 function splitTitles(text: string): string[] {
   const seen = new Set<string>()
@@ -29,17 +33,27 @@ export default function AiSubtitlesDialog({
   item,
   frame,
   onClose,
-  onApplied
+  onApplied,
+  autoGenerate = false
 }: {
   item: SlideshowItem
   /** When set, the dialog works on this one slide: every pasted line goes to it. */
   frame?: SlideFrame
   onClose: () => void
   onApplied: (createdIds: string[]) => void
+  /** Ask the connected AI straight away (the slide's "✨ Write more" button). */
+  autoGenerate?: boolean
 }): React.JSX.Element {
   const { project, updateAiPrompt, applySubtitlePlan } = useProject()
   const settings = project!.aiPrompt
   const copyPrompt = usePromptCopier()
+  const buildPrompt = useSubtitlePrompt()
+  const aiConfig = useAiConfig()
+  const ai = aiReady(aiConfig)
+  const providerLabel = aiConfig?.active ? findProvider(aiConfig.active).label : ''
+  const [generating, setGenerating] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [showAiSettings, setShowAiSettings] = useState(false)
   const [titlesText, setTitlesText] = useState('')
   const [reply, setReply] = useState('')
   const [copied, setCopied] = useState(false)
@@ -84,6 +98,28 @@ export default function AiSubtitlesDialog({
     setCopied(true)
     setTimeout(() => setCopied(false), 4000)
   }
+
+  async function handleGenerate(): Promise<void> {
+    setGenerating(true)
+    setAiError(null)
+    try {
+      const text = await window.api.aiText(buildPrompt(item, frame, frame ? [] : newTypedTitles))
+      setReply(text)
+      setRemoved(new Set())
+    } catch (err) {
+      setAiError(userMessage(err))
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const autoRan = useRef(false)
+  useEffect(() => {
+    if (!autoGenerate || autoRan.current || !ai.text || promptCount === 0) return
+    autoRan.current = true
+    handleGenerate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoGenerate, ai.text])
 
   function addTypedSlides(): void {
     const created = applySubtitlePlan(
@@ -184,11 +220,37 @@ export default function AiSubtitlesDialog({
                 : 'Works with any AI chat. No account or API key needed in this app.'}
           </span>
         </div>
+        <div className="ai-row ai-direct-row">
+          {ai.text ? (
+            <>
+              <button
+                className="btn btn-primary"
+                disabled={promptCount === 0 || generating}
+                onClick={handleGenerate}
+              >
+                {generating ? `✨ Asking ${providerLabel}…` : `✨ Write them with ${providerLabel}`}
+              </button>
+              <span className="inspector-hint ai-inline-hint">
+                Or skip the copy and paste: the reply appears below for you to review.
+              </span>
+            </>
+          ) : (
+            <span className="inspector-hint ai-inline-hint">
+              Want it in one click?{' '}
+              <button className="btn-link" onClick={() => setShowAiSettings(true)}>
+                Connect your own AI
+              </button>{' '}
+              (Claude, ChatGPT, Gemini or a local model).
+            </span>
+          )}
+        </div>
+        {aiError && <p className="feature-warning">{aiError}</p>}
       </section>
 
       <section className="ai-step">
         <h3>
-          <span className="ai-step-num">{frame ? 2 : 3}</span> Paste the AI&apos;s reply
+          <span className="ai-step-num">{frame ? 2 : 3}</span> {ai.text ? 'Review' : 'Paste'} the
+          AI&apos;s reply
         </h3>
         <textarea
           rows={6}
@@ -261,6 +323,7 @@ export default function AiSubtitlesDialog({
         )}
       </section>
 
+      {showAiSettings && <AiSettingsDialog onClose={() => setShowAiSettings(false)} />}
       <div className="modal-footer">
         <button className="btn btn-ghost" onClick={onClose}>
           Cancel

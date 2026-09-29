@@ -34,6 +34,9 @@ import ThemeSwatches from './ThemeSwatches'
 import SlidePreview from './SlidePreview'
 import { SaveTemplateDialog } from '../TemplateDialogs'
 import AiSubtitlesDialog from './AiSubtitlesDialog'
+import MemeMakerDialog from './MemeMakerDialog'
+import { aiReady } from '@shared/ai'
+import { useAiConfig } from '../../lib/aiConfig'
 import { usePromptCopier } from '../../hooks/usePromptCopier'
 
 const ANIMATIONS: { value: TextAnimation; label: string }[] = [
@@ -58,7 +61,8 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
   // editor makes drop positions jump).
   const [dragging, setDragging] = useState(false)
   /** Open AI dialog: for the whole group, or for one slide (frameId). */
-  const [aiDialog, setAiDialog] = useState<{ frameId?: string } | null>(null)
+  const [memeOpen, setMemeOpen] = useState(false)
+  const [aiDialog, setAiDialog] = useState<{ frameId?: string; auto?: boolean } | null>(null)
   const [savingTemplate, setSavingTemplate] = useState(false)
   const aiFrame = aiDialog?.frameId ? item.frames.find((f) => f.id === aiDialog.frameId) : undefined
   const expandedIndex = Math.max(
@@ -141,6 +145,13 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
             <button className="btn btn-ghost" onClick={() => expand(addFrame(item.id, 'image'))}>
               + Image
             </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => setMemeOpen(true)}
+              title="Make a meme (picture + top and bottom captions) as an image slide"
+            >
+              + Meme
+            </button>
             {copiedFrame && (
               <button
                 className="btn btn-ghost"
@@ -180,7 +191,7 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
                   expanded={!dragging && frame.id === expanded?.id}
                   onExpand={() => setExpandedId(frame.id)}
                   onDuplicated={expand}
-                  onOpenAi={() => setAiDialog({ frameId: frame.id })}
+                  onOpenAi={(auto) => setAiDialog({ frameId: frame.id, auto })}
                   dir={dir!}
                 />
               ))}
@@ -189,10 +200,18 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
         </DndContext>
       </div>
 
+      {memeOpen && (
+        <MemeMakerDialog
+          item={item}
+          onClose={() => setMemeOpen(false)}
+          onCreated={(id) => setExpandedId(id)}
+        />
+      )}
       {aiDialog && (
         <AiSubtitlesDialog
           item={item}
           frame={aiFrame}
+          autoGenerate={aiDialog.auto}
           onClose={() => setAiDialog(null)}
           onApplied={(ids) => {
             if (ids[0]) setExpandedId(ids[0])
@@ -396,7 +415,7 @@ function FrameCard({
   expanded: boolean
   onExpand: () => void
   onDuplicated: (id: string | null) => void
-  onOpenAi: () => void
+  onOpenAi: (autoGenerate?: boolean) => void
   dir: string
 }): React.JSX.Element {
   const { removeFrame, copyFrame } = useProject()
@@ -486,7 +505,7 @@ function FrameEditor({
   frame: SlideFrame
   count: number
   dir: string
-  onOpenAi: () => void
+  onOpenAi: (autoGenerate?: boolean) => void
 }): React.JSX.Element {
   const { updateFrame, applyStyleToGroup } = useProject()
 
@@ -583,10 +602,11 @@ function SubtitleEditor({
   itemId: string
   frame: SlideFrame
   patch: (p: Partial<SlideFrame>) => void
-  onOpenAi: () => void
+  onOpenAi: (autoGenerate?: boolean) => void
 }): React.JSX.Element {
   const { project } = useProject()
   const copyPrompt = usePromptCopier()
+  const aiText = aiReady(useAiConfig()).text
   const [copied, setCopied] = useState(false)
   const item = project!.items.find((it) => it.id === itemId)
   const options = frame.subtitleOptions
@@ -693,11 +713,21 @@ function SubtitleEditor({
             </button>
             <button
               className="btn btn-ghost"
-              onClick={onOpenAi}
+              onClick={() => onOpenAi()}
               title="Paste an AI chat's reply (or any list of lines) as variations"
             >
               📥 Paste AI reply
             </button>
+            {aiText && (
+              <button
+                className="btn btn-ghost ai-write-more"
+                disabled={!frame.title.trim()}
+                title="Ask your connected AI for more lines for this slide (you review them first)"
+                onClick={() => onOpenAi(true)}
+              >
+                ✨ Write more
+              </button>
+            )}
           </>
         )}
       </div>

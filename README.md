@@ -64,6 +64,28 @@ transitions and animations.
   lines per title are saved with the project. Lines longer than 60 characters (roughly
   one line on screen) are flagged.
 
+### Your own AI, built in (optional)
+
+- **✨ AI** in the editor connects your own AI account: **Claude (Anthropic)**, **OpenAI
+  (ChatGPT)**, **Google Gemini**, or any **OpenAI-compatible** server: Ollama or LM Studio
+  running on this PC (free, offline) or services like OpenRouter. Paste your API key,
+  pick models (**Load models** lists what your account can use), **Test connection**, and
+  click **Use**.
+- Then **✨ Write them with …** in Quick build & AI, and **✨ Write more** on any slide, get
+  lines and trivia in one click. Everything the AI writes is shown for review first.
+- Keys stay on the PC, encrypted by Windows, never in project files, and are sent only to
+  the provider you chose; usage is billed to your own account. Without an AI connected,
+  the copy-and-paste prompts keep working with any chat.
+
+### Meme slides
+
+- **+ Meme** in a slide group makes a classic top/bottom-caption meme and adds it as an
+  image slide (rendered at 1920×1080 into the project's images).
+- Picture: from your library, a new import, or **🎨 drawn by your AI** from a description
+  (OpenAI, Gemini, or a compatible server with an image model).
+- Captions: type them, click one of the built-in ideas, or **✨ Suggest captions** from your
+  AI based on the group's slides and your event.
+
 ### Reuse
 
 - **Template library** — **📚 Save as template** on any slide group stores it, with its
@@ -173,6 +195,8 @@ run with **publish_release** checked.
 ```
 src/
   main/       Electron main process — dialogs, media import, crash-safe saves, templates,
+              bring-your-own AI (ai/: Claude via the Anthropic SDK, OpenAI, Gemini,
+              OpenAI-compatible),
               movie hand-off and resume points, the phone remote's web server (remote.ts,
               remotePage.html), QR-code slides
   preload/    Context-bridge API exposed to the renderer as window.api

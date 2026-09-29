@@ -113,6 +113,9 @@ export interface ProjectContextValue {
    * clipboard so it can also be pasted into a different slideshow item. Returns the
    * duplicate's id. */
   copyFrame: (itemId: string, frameId: string) => string | null
+  /** Adds a picture made in the app (e.g. a meme) to the library and appends it to a group
+   * as an image slide; returns the new slide's id. */
+  addImageSlide: (itemId: string, file: ImportedMediaFile, displayName: string) => string
   /** Appends the clipboard slide to a group; returns its id. */
   pasteFrame: (itemId: string) => string | null
   dismissMissingMedia: () => void

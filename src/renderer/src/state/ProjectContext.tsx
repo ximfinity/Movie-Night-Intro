@@ -534,6 +534,31 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
     [mutateFrames]
   )
 
+  const addImageSlide = useCallback(
+    (itemId: string, file: ImportedMediaFile, displayName: string): string => {
+      const id = uuid()
+      commit((p) => {
+        const images = p.library.images.some((f) => f.fileName === file.fileName)
+          ? p.library.images
+          : [...p.library.images, { fileName: file.fileName, displayName }]
+        const items = p.items.map((it) => {
+          if (it.id !== itemId || it.type !== 'slideshow') return it
+          const last = it.frames[it.frames.length - 1]
+          const frame: SlideFrame = {
+            ...createSlideFrame('image', last ? slideStyleOf(last) : undefined),
+            id,
+            backgroundImage: file.fileName,
+            backgroundImageDisplayName: displayName
+          }
+          return { ...it, frames: [...it.frames, frame] }
+        })
+        return { ...p, items, library: { ...p.library, images } }
+      })
+      return id
+    },
+    [commit]
+  )
+
   const pasteFrame = useCallback(
     (itemId: string): string | null => {
       const copied = stateRef.current.copiedFrame
@@ -706,6 +731,7 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       reorderFrames,
       applyStyleToGroup,
       copyFrame,
+      addImageSlide,
       pasteFrame,
       dismissMissingMedia,
       applySubtitlePlan,
@@ -741,6 +767,7 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
       reorderFrames,
       applyStyleToGroup,
       copyFrame,
+      addImageSlide,
       pasteFrame,
       dismissMissingMedia,
       applySubtitlePlan,

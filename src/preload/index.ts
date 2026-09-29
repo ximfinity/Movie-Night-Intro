@@ -12,6 +12,7 @@ import type {
   TemplateSummary
 } from '../shared/types'
 import type { RemoteCommand, RemoteServerStatus, RemoteState } from '../shared/remote'
+import type { AiConfigView, AiProviderId, AiSettingsPatch, GeneratedImage } from '../shared/ai'
 
 export interface ResumePoint {
   filePath: string
@@ -75,6 +76,26 @@ const api = {
   /** Writes a full-screen QR-code slide image for a link into the project's images. */
   makeQrSlide: (dir: string, url: string): Promise<ImportedMediaFile> =>
     ipcRenderer.invoke('media:makeQrSlide', dir, url),
+  saveImageData: (
+    dir: string,
+    baseName: string,
+    mimeType: string,
+    base64: string
+  ): Promise<ImportedMediaFile> =>
+    ipcRenderer.invoke('media:saveImageData', dir, baseName, mimeType, base64),
+  readImageDataUrl: (dir: string, fileName: string): Promise<string> =>
+    ipcRenderer.invoke('media:readImageDataUrl', dir, fileName),
+  // Bring-your-own AI (keys stay in the main process)
+  getAiConfig: (): Promise<AiConfigView> => ipcRenderer.invoke('ai:getConfig'),
+  updateAiSettings: (patch: AiSettingsPatch): Promise<AiConfigView> =>
+    ipcRenderer.invoke('ai:updateSettings', patch),
+  setAiKey: (provider: AiProviderId, key: string): Promise<AiConfigView> =>
+    ipcRenderer.invoke('ai:setKey', provider, key),
+  listAiModels: (provider: AiProviderId): Promise<string[]> =>
+    ipcRenderer.invoke('ai:listModels', provider),
+  testAi: (provider: AiProviderId): Promise<string> => ipcRenderer.invoke('ai:test', provider),
+  aiText: (prompt: string): Promise<string> => ipcRenderer.invoke('ai:text', prompt),
+  aiImage: (prompt: string): Promise<GeneratedImage> => ipcRenderer.invoke('ai:image', prompt),
   // Phone remote
   getRemoteStatus: (): Promise<RemoteServerStatus> => ipcRenderer.invoke('remote:status'),
   setRemoteEnabled: (enabled: boolean): Promise<RemoteServerStatus> =>

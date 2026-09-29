@@ -6,6 +6,7 @@ import { itemTitle } from '../lib/itemMeta'
 import { hasFeatureMovie } from '@shared/factory'
 import { useRemoteCommands, useRemoteState } from '../hooks/useRemote'
 import { RemoteButton } from '../components/RemoteDialog'
+import { AiButton } from '../components/AiSettingsDialog'
 import './EditorScreen.css'
 
 export default function EditorScreen({
@@ -149,6 +150,7 @@ export default function EditorScreen({
           >
             ↷
           </button>
+          <AiButton />
           <RemoteButton />
           <button className="btn" onClick={saveProject} disabled={!dirty}>
             Save
