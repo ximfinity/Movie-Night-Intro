@@ -10,8 +10,9 @@ const FALLBACK_MODELS = new Set([
 
 function client(apiKey: string): Anthropic {
   // ANTHROPIC_BASE_URL (if set in the environment) is honoured by the SDK, which is how
-  // the end-to-end tests point it at a local stand-in server.
-  return new Anthropic({ apiKey, timeout: 90_000, maxRetries: 1 })
+  // the end-to-end tests point it at a local stand-in server. Replies are streamed, so a
+  // long answer isn't cut off by a request timeout; the SDK's own defaults apply.
+  return new Anthropic({ apiKey, maxRetries: 1 })
 }
 
 /** Turns SDK errors into something a person can act on. Most specific first. */
@@ -30,6 +31,10 @@ function friendly(err: unknown): Error {
   }
   if (err instanceof Anthropic.BadRequestError) {
     return new Error(`Claude couldn't do that: ${err.message}`)
+  }
+  // A timeout is a kind of connection error, so it's checked first.
+  if (err instanceof Anthropic.APIConnectionTimeoutError) {
+    return new Error('Claude took too long to answer. Try again, or ask for fewer lines.')
   }
   if (err instanceof Anthropic.APIConnectionError) {
     return new Error("Couldn't reach Claude. Is this PC online?")
@@ -63,16 +68,18 @@ export async function claudeText(apiKey: string, model: string, prompt: string):
   try {
     if (FALLBACK_MODELS.has(model)) {
       // If a safety classifier declines, the API retries on a fallback model in the same call.
-      const response = await c.beta.messages.create({
-        model,
-        max_tokens: 16000,
-        messages,
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default'
-      })
+      const response = await c.beta.messages
+        .stream({
+          model,
+          max_tokens: 16000,
+          messages,
+          betas: ['server-side-fallback-2026-07-01'],
+          fallbacks: 'default'
+        })
+        .finalMessage()
       return textOf(response)
     }
-    const response = await c.messages.create({ model, max_tokens: 16000, messages })
+    const response = await c.messages.stream({ model, max_tokens: 16000, messages }).finalMessage()
     return textOf(response)
   } catch (err) {
     throw friendly(err)

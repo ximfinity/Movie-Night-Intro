@@ -68,7 +68,14 @@ function normalizeSlideFrame(raw: Raw): SlideFrame {
     backgroundImageDisplayName: bg ? str(raw.backgroundImageDisplayName, bg) : null,
     durationSec: num(raw.durationSec, DEFAULT_SLIDE_STYLE.durationSec, 1, 120),
     bodyStyle: raw.bodyStyle === 'list' ? 'list' : 'rotate',
-    aiKind: raw.aiKind === 'trivia' ? 'trivia' : 'jokes'
+    aiKind: raw.aiKind === 'trivia' ? 'trivia' : 'jokes',
+    imageFit:
+      raw.imageFit === 'fit' ||
+      // QR slides made by v1.3's New Show wizard predate this setting; a cropped QR code
+      // won't scan, so they're shown whole.
+      (raw.imageFit === undefined && /^donate-qr(-\d+)?\.png$/.test(bg ?? ''))
+        ? 'fit'
+        : 'fill'
   }
 }
 

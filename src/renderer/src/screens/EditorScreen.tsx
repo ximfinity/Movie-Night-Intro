@@ -7,6 +7,7 @@ import { hasFeatureMovie } from '@shared/factory'
 import { useRemoteCommands, useRemoteState } from '../hooks/useRemote'
 import { RemoteButton } from '../components/RemoteDialog'
 import { AiButton } from '../components/AiSettingsDialog'
+import { isAnyModalOpen } from '../lib/modalStack'
 import './EditorScreen.css'
 
 export default function EditorScreen({
@@ -43,6 +44,8 @@ export default function EditorScreen({
         saveProject()
         return
       }
+      // Undo/redo would change the project unseen behind an open dialog.
+      if (isAnyModalOpen()) return
       // Leave undo inside text fields to the field itself (native text undo).
       const target = e.target as HTMLElement | null
       if (target?.closest('input, textarea, select, [contenteditable="true"]')) return

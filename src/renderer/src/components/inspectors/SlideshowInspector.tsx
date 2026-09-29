@@ -563,7 +563,35 @@ function FrameEditor({
           />
         </>
       ) : (
-        <ImagePicker label="Image or GIF" frame={frame} dir={dir} patch={patch} />
+        <>
+          <ImagePicker label="Image or GIF" frame={frame} dir={dir} patch={patch} />
+          <div className="body-style-row">
+            <div
+              className="body-style-toggle"
+              role="radiogroup"
+              aria-label="How the picture fills the screen"
+            >
+              <button
+                role="radio"
+                aria-checked={frame.imageFit !== 'fit'}
+                className={`btn btn-ghost ${frame.imageFit !== 'fit' ? 'body-style-active' : ''}`}
+                onClick={() => patch({ imageFit: 'fill' })}
+                title="Fill the screen with a slow zoom (edges may be cropped)"
+              >
+                Fill screen, slow zoom
+              </button>
+              <button
+                role="radio"
+                aria-checked={frame.imageFit === 'fit'}
+                className={`btn btn-ghost ${frame.imageFit === 'fit' ? 'body-style-active' : ''}`}
+                onClick={() => patch({ imageFit: 'fit' })}
+                title="Show the whole picture, still: best for memes, QR codes and text"
+              >
+                Show whole picture
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       <label className="field">

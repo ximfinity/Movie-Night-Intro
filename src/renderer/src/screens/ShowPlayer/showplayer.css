@@ -119,6 +119,11 @@
   will-change: transform;
 }
 
+.slide-bg-image-fit {
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
 .slide-bg-scrim {
   position: absolute;
   inset: 0;

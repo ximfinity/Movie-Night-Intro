@@ -18,11 +18,16 @@ export interface PromptOptions {
   maxChars: number
 }
 
+/** Most "already used" lines listed in a prompt. */
+export const MAX_USED_LINES = 150
+
 export function buildSubtitlePrompt(opts: PromptOptions): string {
   const titles = opts.titles.map((t) => t.title.trim()).filter(Boolean)
+  // Only the most recent lines: enough to avoid repeats without letting a huge group bury
+  // the reply-format instructions at the end of the prompt.
   const used = [
     ...new Set(opts.titles.flatMap((t) => t.existing.map((s) => s.trim())).filter(Boolean))
-  ]
+  ].slice(-MAX_USED_LINES)
   const triviaTitles = opts.titles
     .filter((t) => t.trivia && t.title.trim())
     .map((t) => t.title.trim())

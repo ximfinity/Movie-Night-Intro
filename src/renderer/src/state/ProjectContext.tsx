@@ -187,7 +187,8 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
             {
               ...createSlideFrame('image', { ...look, durationSec: 15 }),
               backgroundImage: qr.fileName,
-              backgroundImageDisplayName: qr.displayName
+              backgroundImageDisplayName: qr.displayName,
+              imageFit: 'fit'
             }
           )
         }
@@ -548,7 +549,8 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
             ...createSlideFrame('image', last ? slideStyleOf(last) : undefined),
             id,
             backgroundImage: file.fileName,
-            backgroundImageDisplayName: displayName
+            backgroundImageDisplayName: displayName,
+            imageFit: 'fit'
           }
           return { ...it, frames: [...it.frames, frame] }
         })

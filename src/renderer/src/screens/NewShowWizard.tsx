@@ -12,7 +12,7 @@ import {
   type ThemeNightId
 } from '@shared/builtinTemplates'
 import { findSlideTheme } from '@shared/slideThemes'
-import { formatTimeOfDay } from '@shared/countdown'
+import { formatTimeOfDay, parseTimeOfDay } from '@shared/countdown'
 import { useProject } from '../state/useProject'
 import './NewShowWizard.css'
 
@@ -86,6 +86,7 @@ export default function NewShowWizard({ onClose }: { onClose: () => void }): Rea
   const preview = buildShow(themeId, sections, details)
   const slideCount = preview.items.reduce((n, g) => n + g.frames.length, 0)
   const streamOk = movieSource !== 'stream' || /^https:\/\//i.test(streamUrl.trim())
+  const showtimeOk = parseTimeOfDay(showtime) !== null
 
   async function create(): Promise<void> {
     setCreating(true)
@@ -271,6 +272,11 @@ export default function NewShowWizard({ onClose }: { onClose: () => void }): Rea
               </label>
             )}
             {!streamOk && <p className="feature-warning">⚠ The link must start with https://</p>}
+            {!showtimeOk && (
+              <p className="feature-warning">
+                ⚠ Set a showtime, so the countdown knows when to start.
+              </p>
+            )}
             {movieSource !== 'none' && (
               <label className="checkbox-row">
                 <input
@@ -335,7 +341,7 @@ export default function NewShowWizard({ onClose }: { onClose: () => void }): Rea
             {step === 'details' && (
               <button
                 className="btn btn-primary"
-                disabled={!streamOk}
+                disabled={!streamOk || !showtimeOk}
                 onClick={() => setStep('sections')}
               >
                 Next →

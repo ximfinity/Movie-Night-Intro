@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  countdownActive,
+  parseTimeOfDay,
   createShowClock,
   formatTimecode,
   holdRollAt,
@@ -27,8 +29,35 @@ describe('targetTimeToEpoch', () => {
     expect(target - at(23, 30)).toBe(60 * MIN)
   })
 
-  it('treats an unreadable time as now', () => {
+  it('treats an unreadable or cleared time as now (never NaN)', () => {
     expect(targetTimeToEpoch('soon', at(12, 0))).toBe(at(12, 0))
+    expect(targetTimeToEpoch('', at(12, 0))).toBe(at(12, 0))
+    expect(targetTimeToEpoch('7:', at(12, 0))).toBe(at(12, 0))
+    expect(targetTimeToEpoch('25:00', at(12, 0))).toBe(at(12, 0))
+  })
+})
+
+describe('parseTimeOfDay / countdownActive', () => {
+  it('reads real times only', () => {
+    expect(parseTimeOfDay('07:05')).toEqual([7, 5])
+    expect(parseTimeOfDay('7:05')).toEqual([7, 5])
+    expect(parseTimeOfDay('')).toBeNull()
+    expect(parseTimeOfDay('12:60')).toBeNull()
+  })
+
+  it('treats a clock countdown with no time as no countdown', () => {
+    const base = createDefaultCountdown()
+    expect(countdownActive({ ...base, mode: 'clock', targetTime: '20:00' })).toBe(true)
+    expect(countdownActive({ ...base, mode: 'clock', targetTime: '' })).toBe(false)
+    expect(countdownActive({ ...base, mode: 'duration', targetTime: '' })).toBe(true)
+    expect(countdownActive({ ...base, enabled: false, targetTime: '20:00' })).toBe(false)
+    expect(
+      shouldLoopUntil(
+        { ...base, mode: 'clock', targetTime: '', loopPlaylistUntilShowtime: true },
+        NaN,
+        0
+      )
+    ).toBe(false)
   })
 })
 

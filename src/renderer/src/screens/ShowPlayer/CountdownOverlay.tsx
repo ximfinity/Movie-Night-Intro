@@ -33,7 +33,7 @@ export default function CountdownOverlay({
   const totalSec = Math.max(initialSec, remaining)
   const overrun = (now - target) / 1000
 
-  if (!config.enabled || overrun >= config.holdAtZeroSec) return null
+  if (!Number.isFinite(target) || overrun >= config.holdAtZeroSec) return null
 
   const { minutes, seconds } = formatClock(remaining)
   const progress = 1 - remaining / totalSec

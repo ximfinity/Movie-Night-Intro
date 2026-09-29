@@ -178,28 +178,67 @@ export function parseOpenAiChat(json: unknown): string {
   throw new Error('The AI sent back an empty reply.')
 }
 
+/** Picture size to ask for: each OpenAI image model accepts its own sizes, and unknown
+ * (compatible-server) models get the server's default. */
+export function openAiImageSize(model: string): string | undefined {
+  const m = model.toLowerCase()
+  if (m.startsWith('gpt-image')) return '1536x1024'
+  if (m.startsWith('dall-e-3')) return '1792x1024'
+  if (m.startsWith('dall-e-2')) return '1024x1024'
+  return undefined
+}
+
 export function openAiImageRequest(
   baseUrl: string,
   key: string,
   model: string,
   prompt: string
 ): HttpRequest {
+  const size = openAiImageSize(model)
   return {
     url: `${trimSlash(baseUrl)}/images/generations`,
     init: {
       method: 'POST',
       headers: jsonHeaders(bearer(key)),
-      body: JSON.stringify({ model, prompt, n: 1, size: '1536x1024' })
+      body: JSON.stringify({
+        model,
+        prompt,
+        n: 1,
+        ...(size ? { size } : {}),
+        // DALL-E replies with a link unless asked for the picture itself; gpt-image models
+        // always send the picture and reject this option.
+        ...(model.toLowerCase().startsWith('dall-e') ? { response_format: 'b64_json' } : {})
+      })
     }
   }
 }
 
-export function parseOpenAiImage(json: unknown): GeneratedImage {
-  const first = (json as { data?: { b64_json?: unknown }[] })?.data?.[0]
+/** A picture in the reply, or a link to download it from (many compatible servers). */
+export type ImageReply = GeneratedImage | { url: string }
+
+export function parseOpenAiImage(json: unknown): ImageReply {
+  const first = (json as { data?: { b64_json?: unknown; url?: unknown }[] })?.data?.[0]
   if (typeof first?.b64_json === 'string' && first.b64_json) {
     return { mimeType: 'image/png', base64: first.b64_json }
   }
+  if (typeof first?.url === 'string' && /^https?:\/\//i.test(first.url)) return { url: first.url }
   throw new Error("The AI didn't send back a picture.")
+}
+
+/** Whether a server address is on this PC or the local network, where plain http is
+ * acceptable (Ollama, LM Studio). Anywhere else, an API key must travel over https. */
+export function isLocalAddress(url: string): boolean {
+  let host: string
+  try {
+    host = new URL(url).hostname.toLowerCase().replace(/^\[|\]$/g, '')
+  } catch {
+    return false
+  }
+  if (host === 'localhost' || host === '::1' || host.endsWith('.local')) return true
+  const v4 = host.match(/^(\d+)\.(\d+)\.\d+\.\d+$/)
+  if (!v4) return false
+  const [a, b] = [Number(v4[1]), Number(v4[2])]
+  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31)
 }
 
 export function geminiTextRequest(

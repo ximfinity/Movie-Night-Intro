@@ -15,6 +15,8 @@ import {
   parseModelList,
   parseOpenAiChat,
   parseOpenAiImage,
+  isLocalAddress,
+  type ImageReply,
   type AiConfigView,
   type AiProviderId,
   type AiSettingsPatch,
@@ -41,7 +43,8 @@ interface Stored {
   providers: Partial<Record<AiProviderId, StoredProvider>>
 }
 
-const MAX_PROMPT_CHARS = 20_000
+const MAX_PROMPT_CHARS = 100_000
+const MAX_IMAGE_BYTES = 25 * 1024 * 1024
 const TEXT_TIMEOUT_MS = 90_000
 const IMAGE_TIMEOUT_MS = 180_000
 
@@ -52,19 +55,47 @@ function configFile(): string {
 }
 
 async function load(): Promise<void> {
+  let text: string
   try {
-    const raw = JSON.parse(await fs.readFile(configFile(), 'utf-8'))
+    text = await fs.readFile(configFile(), 'utf-8')
+  } catch {
+    return // First run: nothing connected.
+  }
+  try {
+    const raw = JSON.parse(text)
     stored = {
       active: AI_PROVIDERS.some((p) => p.id === raw.active) ? raw.active : null,
       providers: typeof raw.providers === 'object' && raw.providers ? raw.providers : {}
     }
-  } catch {
-    // First run: nothing connected.
+  } catch (err) {
+    // Keep the damaged file for recovery rather than overwriting it on the next save.
+    console.error('AI settings file is damaged; starting fresh:', err)
+    await fs.rename(configFile(), `${configFile()}.damaged`).catch(() => {})
   }
 }
 
-async function save(): Promise<void> {
-  await fs.writeFile(configFile(), JSON.stringify(stored, null, 2), 'utf-8')
+let saving: Promise<void> = Promise.resolve()
+
+/** Crash-safe and one at a time: write a temp file, then swap it into place, so a power
+ * cut or two quick changes can never leave a half-written file (and lost keys). */
+function save(): Promise<void> {
+  const data = JSON.stringify(stored, null, 2)
+  saving = saving
+    .catch(() => {})
+    .then(async () => {
+      const target = configFile()
+      const tmp = `${target}.tmp`
+      await fs.writeFile(tmp, data, 'utf-8')
+      try {
+        await fs.rename(tmp, target)
+      } catch (err) {
+        // Windows can briefly lock a file (antivirus, indexer); one retry covers that.
+        if ((err as NodeJS.ErrnoException).code !== 'EPERM') throw err
+        await new Promise((r) => setTimeout(r, 150))
+        await fs.rename(tmp, target)
+      }
+    })
+  return saving
 }
 
 function providerSettings(id: AiProviderId): StoredProvider {
@@ -165,8 +196,12 @@ export async function generateText(prompt: string, providerId?: AiProviderId): P
   const id = providerId ?? stored.active
   if (!id) throw new Error('Connect an AI in ✨ AI settings first.')
   if (typeof prompt !== 'string' || !prompt.trim()) throw new Error('Nothing to ask the AI.')
-  const text = prompt.slice(0, MAX_PROMPT_CHARS)
+  if (prompt.length > MAX_PROMPT_CHARS) {
+    throw new Error('That request is too long for the AI. Try a smaller group of slides.')
+  }
+  const text = prompt
   const { key, s, label } = requireReady(id)
+  checkKeyTransport(id, s.baseUrl, key)
   switch (id) {
     case 'anthropic':
       return claudeText(key, s.textModel, text)
@@ -195,6 +230,7 @@ export async function generateImage(prompt: string): Promise<GeneratedImage> {
     throw new Error(`${info.label} can't make pictures. Pick one from your library instead.`)
   }
   const { key, s, label } = requireReady(id)
+  checkKeyTransport(id, s.baseUrl, key)
   if (!s.imageModel) throw new Error('Choose a picture model in ✨ AI settings.')
   const text = String(prompt ?? '').slice(0, 4000)
   if (id === 'gemini') {
@@ -205,12 +241,42 @@ export async function generateImage(prompt: string): Promise<GeneratedImage> {
       IMAGE_TIMEOUT_MS
     )
   }
-  return callJson(
+  const reply = await callJson<ImageReply>(
     openAiImageRequest(s.baseUrl, key, s.imageModel, text),
     parseOpenAiImage,
     label,
     IMAGE_TIMEOUT_MS
   )
+  return 'url' in reply ? downloadImage(reply.url, label) : reply
+}
+
+/** Fetches a picture the AI replied with a link to. */
+async function downloadImage(url: string, label: string): Promise<GeneratedImage> {
+  checkUrl(url)
+  let res: Response
+  try {
+    res = await fetch(url, { signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS) })
+  } catch {
+    throw new Error(`Couldn't download the picture from ${label}.`)
+  }
+  if (!res.ok) throw new Error(`Couldn't download the picture from ${label} (error ${res.status}).`)
+  const mimeType = (res.headers.get('content-type') ?? 'image/png').split(';')[0].trim()
+  if (!mimeType.startsWith('image/'))
+    throw new Error(`${label} sent back a link that isn't a picture.`)
+  const bytes = Buffer.from(await res.arrayBuffer())
+  if (bytes.length > MAX_IMAGE_BYTES) throw new Error('That picture is too large.')
+  return { mimeType, base64: bytes.toString('base64') }
+}
+
+/** Never send an API key unencrypted across the internet: over plain http only to this PC
+ * or the local network. */
+function checkKeyTransport(id: AiProviderId, baseUrl: string, key: string): void {
+  if (id !== 'compatible' || !key) return
+  if (/^http:\/\//i.test(baseUrl.trim()) && !isLocalAddress(baseUrl)) {
+    throw new Error(
+      "This server address uses http://, which would send your API key unencrypted. Use its https:// address, or remove the key if the server doesn't need one."
+    )
+  }
 }
 
 async function listModels(id: AiProviderId): Promise<string[]> {
@@ -219,6 +285,7 @@ async function listModels(id: AiProviderId): Promise<string[]> {
   const key = readKey(id)
   if (info.needsKey && !key) throw new Error(`Add your ${info.label} API key first.`)
   if (id === 'anthropic') return claudeModels(key)
+  checkKeyTransport(id, s.baseUrl, key)
   return callJson(
     modelListRequest(id, s.baseUrl, key),
     (json) => parseModelList(id, json),
@@ -231,59 +298,62 @@ function assertProvider(id: unknown): asserts id is AiProviderId {
   if (!AI_PROVIDERS.some((p) => p.id === id)) throw new Error('Unknown AI provider.')
 }
 
-export async function initAi(): Promise<void> {
-  await load()
+export function initAi(): void {
+  // Handlers are registered straight away (so an early call can't hit "no handler") and
+  // each waits for the settings to finish loading.
+  const ready = load()
+  const handle = <A extends unknown[], R>(
+    channel: string,
+    fn: (...args: A) => R | Promise<R>
+  ): void => {
+    ipcMain.handle(channel, async (_evt, ...args) => {
+      await ready
+      return fn(...(args as A))
+    })
+  }
 
-  ipcMain.handle('ai:getConfig', (): AiConfigView => view())
+  handle('ai:getConfig', (): AiConfigView => view())
 
-  ipcMain.handle(
-    'ai:updateSettings',
-    async (_evt, patch: AiSettingsPatch): Promise<AiConfigView> => {
-      if (patch.active !== undefined) {
-        if (patch.active !== null) assertProvider(patch.active)
-        stored.active = patch.active
-      }
-      if (patch.provider !== undefined) {
-        assertProvider(patch.provider)
-        const current = providerSettings(patch.provider)
-        const next = { ...current }
-        if (typeof patch.textModel === 'string') next.textModel = patch.textModel.trim()
-        if (typeof patch.imageModel === 'string') next.imageModel = patch.imageModel.trim()
-        if (typeof patch.baseUrl === 'string') {
-          const url = patch.baseUrl.trim()
-          if (url) checkUrl(url)
-          next.baseUrl = url
-        }
-        stored.providers[patch.provider] = next
-      }
-      await save()
-      return view()
+  handle('ai:updateSettings', async (patch: AiSettingsPatch): Promise<AiConfigView> => {
+    if (patch.active !== undefined) {
+      if (patch.active !== null) assertProvider(patch.active)
+      stored.active = patch.active
     }
-  )
-
-  ipcMain.handle(
-    'ai:setKey',
-    async (_evt, id: AiProviderId, key: string): Promise<AiConfigView> => {
-      assertProvider(id)
-      const clean = String(key ?? '').trim()
-      const current = providerSettings(id)
-      const encrypt = !!clean && safeStorage.isEncryptionAvailable()
-      stored.providers[id] = {
-        ...current,
-        key: clean ? (encrypt ? safeStorage.encryptString(clean).toString('base64') : clean) : '',
-        keyEncrypted: encrypt
+    if (patch.provider !== undefined) {
+      assertProvider(patch.provider)
+      const next = { ...providerSettings(patch.provider) }
+      if (typeof patch.textModel === 'string') next.textModel = patch.textModel.trim()
+      if (typeof patch.imageModel === 'string') next.imageModel = patch.imageModel.trim()
+      if (typeof patch.baseUrl === 'string') {
+        const url = patch.baseUrl.trim()
+        if (url) checkUrl(url)
+        next.baseUrl = url
       }
-      await save()
-      return view()
+      stored.providers[patch.provider] = next
     }
-  )
+    await save()
+    return view()
+  })
 
-  ipcMain.handle('ai:listModels', async (_evt, id: AiProviderId): Promise<string[]> => {
+  handle('ai:setKey', async (id: AiProviderId, key: string): Promise<AiConfigView> => {
+    assertProvider(id)
+    const clean = String(key ?? '').trim()
+    const encrypt = !!clean && safeStorage.isEncryptionAvailable()
+    stored.providers[id] = {
+      ...providerSettings(id),
+      key: clean ? (encrypt ? safeStorage.encryptString(clean).toString('base64') : clean) : '',
+      keyEncrypted: encrypt
+    }
+    await save()
+    return view()
+  })
+
+  handle('ai:listModels', (id: AiProviderId): Promise<string[]> => {
     assertProvider(id)
     return listModels(id)
   })
 
-  ipcMain.handle('ai:test', async (_evt, id: AiProviderId): Promise<string> => {
+  handle('ai:test', async (id: AiProviderId): Promise<string> => {
     assertProvider(id)
     const reply = await generateText(
       'This is a connection test from a movie-night app. Reply with one short, cheerful sentence about popcorn.',
@@ -292,9 +362,7 @@ export async function initAi(): Promise<void> {
     return reply.trim().slice(0, 300)
   })
 
-  ipcMain.handle('ai:text', (_evt, prompt: string): Promise<string> => generateText(prompt))
+  handle('ai:text', (prompt: string): Promise<string> => generateText(prompt))
 
-  ipcMain.handle('ai:image', (_evt, prompt: string): Promise<GeneratedImage> =>
-    generateImage(prompt)
-  )
+  handle('ai:image', (prompt: string): Promise<GeneratedImage> => generateImage(prompt))
 }

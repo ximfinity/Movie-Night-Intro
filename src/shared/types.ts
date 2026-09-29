@@ -47,6 +47,11 @@ export type SlideBodyStyle = 'rotate' | 'list'
  * about tonight's movie. */
 export type SlideAiKind = 'jokes' | 'trivia'
 
+/** How an image slide's picture fills the screen: 'fill' crops to cover it with a slow
+ * zoom; 'fit' shows the whole picture, still (for memes, QR codes and anything with text
+ * near the edges). */
+export type SlideImageFit = 'fill' | 'fit'
+
 /** One frame within a Slideshow item. Frames rotate automatically, each for its own
  * duration, while the slideshow's single shared music track keeps playing underneath. */
 export interface SlideFrame {
@@ -64,6 +69,7 @@ export interface SlideFrame {
   durationSec: number
   bodyStyle: SlideBodyStyle
   aiKind: SlideAiKind
+  imageFit: SlideImageFit
 }
 
 export interface BaseItem {

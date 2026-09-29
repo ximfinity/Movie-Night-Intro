@@ -34,7 +34,8 @@ transitions and animations.
 - **Slide groups** — a group holds one or more **slides that rotate** automatically, and
   can be given a name. Each slide is either a **text slide** (fixed title, a theme, an
   entrance animation, and an optional background image or GIF) or a full-bleed
-  **image/GIF slide**. A text slide's subtitle can hold several **variations**; the show
+  **image/GIF slide** (either filling the screen with a slow zoom, or shown whole and still:
+  best for memes, QR codes and pictures with text). A text slide's subtitle can hold several **variations**; the show
   rotates through all of them before repeating any, so the same line never shows twice in
   a row. Or show **all lines at once as a list** — menus, sponsor lists, schedules; a line
   like `Popcorn | $2` becomes a dotted price column.

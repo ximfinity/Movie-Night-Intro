@@ -57,9 +57,10 @@ export default function SlideFrameView({
     ? mediaFileUrl(dir, 'image', frame.backgroundImage)
     : null
   const kenBurnsRef = useRef<HTMLDivElement>(null)
+  const fitWhole = frame.content === 'image' && frame.imageFit === 'fit'
 
   useEffect(() => {
-    if (!bgImageUrl || !kenBurnsRef.current) return
+    if (!bgImageUrl || !kenBurnsRef.current || fitWhole) return
     const tween = gsap.fromTo(
       kenBurnsRef.current,
       { scale: 1 },
@@ -128,7 +129,7 @@ export default function SlideFrameView({
         {bgImageUrl && (
           <div
             ref={kenBurnsRef}
-            className="slide-bg-image"
+            className={`slide-bg-image ${fitWhole ? 'slide-bg-image-fit' : ''}`}
             style={{ backgroundImage: cssUrl(bgImageUrl) }}
           />
         )}

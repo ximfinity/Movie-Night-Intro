@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PlaylistItem, SlideshowItem } from '@shared/types'
 import {
+  countdownActive,
   createShowClock,
   holdRollAt,
   offsetForStartIn,
@@ -114,6 +115,8 @@ export default function ShowPlayer({
   const { project, dir } = useProject()
   const items = project!.items
   const countdown = project!.countdown
+  /** On, with a real showtime (a cleared clock time means no countdown). */
+  const hasShowtime = countdownActive(countdown)
   const feature = project!.feature
   const hasFeature = hasFeatureMovie(feature)
   const music = useBackgroundMusic(dir!)
@@ -242,7 +245,7 @@ export default function ShowPlayer({
         feature.startMode,
         feature.holdSec,
         now,
-        countdown.enabled && !ignoreShowtime ? getShowtime(now) : null
+        hasShowtime && !ignoreShowtime ? getShowtime(now) : null
       )
     )
     wrapUpRef.current = false
@@ -261,7 +264,7 @@ export default function ShowPlayer({
         feature.holdSec,
         holdEnteredAtRef.current,
         // eslint-disable-next-line react-hooks/purity -- only called from events and timers
-        countdown.enabled ? getShowtime(Date.now()) : null
+        hasShowtime ? getShowtime(Date.now()) : null
       )
     )
   }
@@ -271,7 +274,7 @@ export default function ShowPlayer({
     // Only ever called from media/timer callbacks, never during render.
     // eslint-disable-next-line react-hooks/purity
     const now = Date.now()
-    const showtime = countdown.enabled ? getShowtime(now) : null
+    const showtime = hasShowtime ? getShowtime(now) : null
     // At showtime (or when asked to wrap up) the item that was playing has now finished,
     // so the hold screen comes up.
     if (hasFeature && (wrapUpRef.current || (showtime !== null && now >= showtime))) {
@@ -362,6 +365,7 @@ export default function ShowPlayer({
   }
 
   function moveShowtime(offsetMs: number, label: string): void {
+    if (!Number.isFinite(offsetMs)) return
     clockRef.current = { ...clockRef.current, offsetMs }
     if (countdown.mode === 'clock') sessionOffsets.set(project!.id, offsetMs)
     retimeHold()
@@ -386,14 +390,14 @@ export default function ShowPlayer({
         break
       }
       case 'shiftShowtime':
-        if (!countdown.enabled) break
+        if (!hasShowtime) break
         moveShowtime(
           clockRef.current.offsetMs + value * 60_000,
           `Showtime moved ${value > 0 ? '+' : '−'}${Math.abs(value)} min`
         )
         break
       case 'startIn':
-        if (!countdown.enabled) break
+        if (!hasShowtime) break
         moveShowtime(
           // eslint-disable-next-line react-hooks/purity -- only called from events
           offsetForStartIn(countdown, clockRef.current, Date.now(), value),
@@ -455,7 +459,7 @@ export default function ShowPlayer({
       itemIndex: top?.index ?? 0,
       itemCount: items.length,
       paused: phase === 'movie' ? (movieStatus?.paused ?? false) : paused,
-      showtimeAt: countdown.enabled ? getShowtime(now) : null,
+      showtimeAt: hasShowtime ? getShowtime(now) : null,
       wrappingUp,
       rollAt: phase === 'hold' ? rollAt : null,
       hasFeature,
@@ -587,7 +591,9 @@ export default function ShowPlayer({
         <EndCard feature={feature} group={groupById(feature.endSlideGroupId)} dir={dir!} />
       )}
       <PopupVideoOverlay ref={popupVideoRef} dir={dir!} paused={paused} />
-      {phase === 'preshow' && <CountdownOverlay config={countdown} getShowtime={getShowtime} />}
+      {phase === 'preshow' && hasShowtime && (
+        <CountdownOverlay config={countdown} getShowtime={getShowtime} />
+      )}
       {ending && <div className="show-fade-black" />}
       <ShowHud paused={paused && phase !== 'hold'} message={message} />
     </div>

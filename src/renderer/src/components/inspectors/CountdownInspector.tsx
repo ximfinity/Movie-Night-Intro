@@ -1,6 +1,7 @@
 import type { CountdownConfig, CountdownMode, CountdownStyle, OverlayPosition } from '@shared/types'
 import { useProject } from '../../state/useProject'
 import { formatDuration } from '../../lib/itemMeta'
+import { parseTimeOfDay } from '@shared/countdown'
 
 const MODES: { value: CountdownMode; label: string; hint: string }[] = [
   {
@@ -90,6 +91,12 @@ export default function CountdownInspector({
               onChange={(e) => updateCountdown({ targetTime: e.target.value })}
             />
           </label>
+          {!parseTimeOfDay(config.targetTime) && (
+            <p className="feature-warning">
+              ⚠ No time set: the countdown won&apos;t show and showtime never arrives until you pick
+              one.
+            </p>
+          )}
 
           <label className="checkbox-row">
             <input

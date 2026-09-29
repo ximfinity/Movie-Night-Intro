@@ -1,4 +1,5 @@
 import type { PlaylistItem, SlideFrame, SlideshowItem } from '@shared/types'
+import { parseTimeOfDay } from '@shared/countdown'
 
 export function itemIcon(type: PlaylistItem['type']): string {
   switch (type) {
@@ -72,8 +73,9 @@ export function formatDuration(totalSeconds: number): string {
 
 /** Formats a stored 24-hour "HH:mm" as a friendly 12-hour clock label, e.g. "7:30 PM". */
 export function formatClockLabel(hhmm: string): string {
-  const [h, m] = hhmm.split(':').map(Number)
-  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm
+  const parsed = parseTimeOfDay(hhmm)
+  if (!parsed) return 'no time set'
+  const [h, m] = parsed
   const period = h >= 12 ? 'PM' : 'AM'
   const hour12 = h % 12 === 0 ? 12 : h % 12
   return `${hour12}:${String(m).padStart(2, '0')} ${period}`

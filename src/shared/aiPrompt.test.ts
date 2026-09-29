@@ -61,6 +61,23 @@ describe('buildSubtitlePrompt', () => {
   })
 })
 
+describe('buildSubtitlePrompt with a huge group', () => {
+  it('lists only recent used lines so the reply format stays in the prompt', () => {
+    const existing = Array.from({ length: 400 }, (_, i) => `used line number ${i}`)
+    const p = buildSubtitlePrompt({
+      titles: [{ title: 'Snacks', existing }],
+      event: '',
+      tone: '',
+      perTitle: 5,
+      maxChars: 60
+    })
+    expect(p).not.toContain('used line number 0\n')
+    expect(p).toContain('used line number 399')
+    expect(p.split('\n').filter((l) => l.startsWith('used line number'))).toHaveLength(150)
+    expect(p.trim().endsWith('```')).toBe(true)
+  })
+})
+
 describe('cleanLine', () => {
   it('strips list markers, numbering, quotes and bold', () => {
     expect(cleanLine('- Butter is a food group')).toBe('Butter is a food group')

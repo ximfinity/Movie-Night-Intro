@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SlideshowItem } from '@shared/types'
 import {
   BUILTIN_MEME_CAPTIONS,
@@ -11,7 +11,7 @@ import { aiReady, findProvider } from '@shared/ai'
 import { useProject } from '../../state/useProject'
 import { useAiConfig } from '../../lib/aiConfig'
 import { userMessage } from '../../lib/errors'
-import { drawMeme, loadImage } from '../../lib/memeRender'
+import { drawMeme, loadImage, renderPictureLayer } from '../../lib/memeRender'
 import Modal from '../Modal'
 import AiSettingsDialog from '../AiSettingsDialog'
 
@@ -39,7 +39,8 @@ export default function MemeMakerDialog({
   const images = project!.library.images
 
   const [picture, setPicture] = useState<Picture | null>(null)
-  const [img, setImg] = useState<HTMLImageElement | null>(null)
+  /** The last picture that finished loading, tagged with its source. */
+  const [loaded, setLoaded] = useState<{ src: string; img: HTMLImageElement } | null>(null)
   const [caption, setCaption] = useState<MemeCaption>(BUILTIN_MEME_CAPTIONS[0])
   const [ideas, setIdeas] = useState<MemeCaption[]>(BUILTIN_MEME_CAPTIONS)
   const [ideasFromAi, setIdeasFromAi] = useState(false)
@@ -59,18 +60,26 @@ export default function MemeMakerDialog({
     let cancelled = false
     if (!picture) return
     loadImage(picture.src)
-      .then((loaded) => !cancelled && setImg(loaded))
-      .catch((err) => !cancelled && setError(userMessage(err)))
+      .then((img) => !cancelled && setLoaded({ src: picture.src, img }))
+      .catch((err) => {
+        if (cancelled) return
+        setError(userMessage(err))
+        setPicture(null)
+      })
     return () => {
       cancelled = true
     }
   }, [picture])
 
-  // The loaded picture, unless it was cleared.
-  const shownImg = picture ? img : null
+  // Only the picture that is actually selected: never a previous one while the new one is
+  // loading (or failed to).
+  const shownImg = picture && loaded?.src === picture.src ? loaded.img : null
+  const pictureLoading = !!picture && !shownImg
+  // The blurred picture layer is costly, so it's built once per picture, not per keystroke.
+  const layer = useMemo(() => renderPictureLayer(shownImg), [shownImg])
   useEffect(() => {
-    if (canvasRef.current) drawMeme(canvasRef.current, shownImg, caption)
-  }, [shownImg, caption])
+    if (canvasRef.current) drawMeme(canvasRef.current, layer, caption)
+  }, [layer, caption])
 
   async function pickLibraryImage(fileName: string): Promise<void> {
     setError(null)
@@ -135,7 +144,7 @@ export default function MemeMakerDialog({
     setBusy('save')
     setError(null)
     try {
-      drawMeme(canvasRef.current, shownImg, caption)
+      drawMeme(canvasRef.current, layer, caption)
       const base64 = canvasRef.current.toDataURL('image/png').split(',')[1]
       const name = `meme ${caption.top || caption.bottom}`.slice(0, 36)
       const file = await window.api.saveImageData(dir!, name, 'image/png', base64)
@@ -272,7 +281,11 @@ export default function MemeMakerDialog({
         </button>
         <button
           className="btn btn-primary"
-          disabled={busy !== null || (!caption.top.trim() && !caption.bottom.trim() && !picture)}
+          disabled={
+            busy !== null ||
+            pictureLoading ||
+            (!caption.top.trim() && !caption.bottom.trim() && !picture)
+          }
           onClick={save}
         >
           {busy === 'save' ? 'Adding…' : 'Add meme slide'}

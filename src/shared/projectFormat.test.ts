@@ -91,6 +91,26 @@ describe('normalizeProject', () => {
     })
   })
 
+  it('shows QR slides from older projects whole, and defaults other pictures to fill', () => {
+    const p = normalizeProject({
+      items: [
+        {
+          type: 'slideshow',
+          frames: [
+            { content: 'image', backgroundImage: 'donate-qr.png' },
+            { content: 'image', backgroundImage: 'donate-qr-2.png', imageFit: 'fill' },
+            { content: 'image', backgroundImage: 'poster.png' }
+          ]
+        }
+      ]
+    })
+    expect((p.items[0] as SlideshowItem).frames.map((f) => f.imageFit)).toEqual([
+      'fit',
+      'fill',
+      'fill'
+    ])
+  })
+
   it('drops music with no file and clamps music settings', () => {
     const p = normalizeProject({
       items: [

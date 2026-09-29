@@ -20,7 +20,10 @@ export function reloadAiConfig(): Promise<void> {
   loading = window.api
     .getAiConfig()
     .then(setAiConfig)
-    .catch((err) => console.warn('Could not load AI settings:', err))
+    .catch((err) => {
+      console.warn('Could not load AI settings:', err)
+      loading = null // try again the next time a screen asks
+    })
   return loading
 }
 

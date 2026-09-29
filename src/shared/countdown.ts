@@ -8,14 +8,31 @@ export function formatTimeOfDay(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+/** [hours, minutes] from a "H:mm"/"HH:mm" time, or null if it isn't one (e.g. a cleared
+ * time box, which gives ""). */
+export function parseTimeOfDay(hhmm: string): [number, number] | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm ?? '').trim())
+  if (!m) return null
+  const hours = Number(m[1])
+  const minutes = Number(m[2])
+  return hours < 24 && minutes < 60 ? [hours, minutes] : null
+}
+
+/** Whether the countdown can actually reach a showtime: it's on, and in clock mode the
+ * target time is a real time of day. A cleared time counts as no countdown at all. */
+export function countdownActive(config: CountdownConfig): boolean {
+  return config.enabled && (config.mode !== 'clock' || parseTimeOfDay(config.targetTime) !== null)
+}
+
 /** Resolves a "HH:mm" local time of day to the epoch ms of its next sensible occurrence
  * relative to `now`: today, unless today's occurrence is more than 12 hours in the past, in
  * which case it's tomorrow's (so setting 00:30 at 23:30 counts down 1 hour instead of
  * reading as long finished). Times up to 12 hours ago still resolve to today, so a show
  * that's running late reads as complete rather than jumping to tomorrow. */
 export function targetTimeToEpoch(hhmm: string, now: number = Date.now()): number {
-  const [hours, minutes] = hhmm.split(':').map(Number)
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return now
+  const parsed = parseTimeOfDay(hhmm)
+  if (!parsed) return now
+  const [hours, minutes] = parsed
   const target = new Date(now)
   target.setHours(hours, minutes, 0, 0)
   if (target.getTime() < now - 12 * HOUR_MS) target.setDate(target.getDate() + 1)
@@ -60,7 +77,9 @@ export function offsetForStartIn(
 /** Whether the playlist should start over from the top when it reaches its end at `now`,
  * given when showtime currently falls. */
 export function shouldLoopUntil(config: CountdownConfig, showtime: number, now: number): boolean {
-  if (!config.enabled || config.mode !== 'clock' || !config.loopPlaylistUntilShowtime) return false
+  if (!countdownActive(config) || config.mode !== 'clock' || !config.loopPlaylistUntilShowtime) {
+    return false
+  }
   return showtime > now
 }
 

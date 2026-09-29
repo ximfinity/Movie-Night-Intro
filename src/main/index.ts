@@ -368,7 +368,7 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   registerFeatureHandlers(() => mainWindow)
   registerQrHandlers()
-  initAi().catch((err) => console.error('AI settings failed to load:', err))
+  initAi()
   createWindow()
   initRemote(() => mainWindow).catch((err) => console.error('Phone remote failed to start:', err))
 

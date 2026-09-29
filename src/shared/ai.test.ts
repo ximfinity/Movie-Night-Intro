@@ -12,8 +12,54 @@ import {
   parseModelList,
   parseOpenAiChat,
   parseOpenAiImage,
+  openAiImageSize,
+  isLocalAddress,
   type AiConfigView
 } from './ai'
+
+describe('picture options per model', () => {
+  it('asks each OpenAI model for a size it accepts', () => {
+    expect(openAiImageSize('gpt-image-1')).toBe('1536x1024')
+    expect(openAiImageSize('dall-e-3')).toBe('1792x1024')
+    expect(openAiImageSize('dall-e-2')).toBe('1024x1024')
+    expect(openAiImageSize('stable-diffusion')).toBeUndefined()
+  })
+
+  it('asks DALL-E for the picture itself, and nobody else', () => {
+    const body = (model: string): Record<string, unknown> =>
+      JSON.parse(openAiImageRequest('https://x/v1', 'k', model, 'p').init.body!)
+    expect(body('dall-e-3').response_format).toBe('b64_json')
+    expect(body('gpt-image-1').response_format).toBeUndefined()
+    expect(body('local-model').size).toBeUndefined()
+  })
+})
+
+describe('isLocalAddress', () => {
+  it('treats this PC and private networks as local', () => {
+    for (const url of [
+      'http://localhost:11434/v1',
+      'http://127.0.0.1:1234',
+      'http://[::1]:8080',
+      'http://192.168.1.20:1234/v1',
+      'http://10.0.0.5',
+      'http://172.20.1.1',
+      'http://gpu-box.local:8080'
+    ]) {
+      expect(isLocalAddress(url), url).toBe(true)
+    }
+  })
+
+  it('treats everything else as remote', () => {
+    for (const url of [
+      'http://api.example.com/v1',
+      'http://172.32.0.1',
+      'http://8.8.8.8',
+      'nonsense'
+    ]) {
+      expect(isLocalAddress(url), url).toBe(false)
+    }
+  })
+})
 
 describe('OpenAI and compatible requests', () => {
   it('builds a chat request with the key only when there is one', () => {
@@ -44,7 +90,11 @@ describe('OpenAI and compatible requests', () => {
       mimeType: 'image/png',
       base64: 'AAA'
     })
-    expect(() => parseOpenAiImage({ data: [{ url: 'http://x' }] })).toThrow(/picture/)
+    expect(parseOpenAiImage({ data: [{ url: 'https://cdn.example/p.png' }] })).toEqual({
+      url: 'https://cdn.example/p.png'
+    })
+    expect(() => parseOpenAiImage({ data: [{ url: 'file:///etc/passwd' }] })).toThrow(/picture/)
+    expect(() => parseOpenAiImage({ data: [] })).toThrow(/picture/)
   })
 })
 

@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 
-/** Open dialogs, innermost last: Esc closes only the one on top. */
-const openStack: object[] = []
+import { isTopModal, pushModal } from '../lib/modalStack'
 
 export default function Modal({
   title,
@@ -15,16 +14,11 @@ export default function Modal({
   width?: number
 }): React.JSX.Element {
   const [token] = useState(() => ({}))
-  useEffect(() => {
-    openStack.push(token)
-    return () => {
-      openStack.splice(openStack.indexOf(token), 1)
-    }
-  }, [token])
+  useEffect(() => pushModal(token), [token])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape' && openStack[openStack.length - 1] === token) onClose()
+      if (e.key === 'Escape' && isTopModal(token)) onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

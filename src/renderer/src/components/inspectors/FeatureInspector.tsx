@@ -7,7 +7,7 @@ import type {
   MovieStartMode,
   MovieTransition
 } from '@shared/types'
-import { formatTimecode } from '@shared/countdown'
+import { countdownActive, formatTimecode } from '@shared/countdown'
 import { libraryKey, mediaFileUrl } from '@shared/paths'
 import { useProject } from '../../state/useProject'
 import { itemTitle } from '../../lib/itemMeta'
@@ -320,10 +320,10 @@ export default function FeatureInspector({
           <strong>hold screen</strong> comes up. Press <kbd>Enter</kbd> (or 🎬 Wrap up on the phone
           remote) to wrap up early.
         </p>
-        {!countdown.enabled && (
+        {!countdownActive(countdown) && (
           <p className="feature-warning">
-            The countdown overlay is off, so showtime never arrives on its own: wrap up with Enter
-            or the remote, or the hold screen comes up when the playlist ends.
+            The countdown is off (or has no time set), so showtime never arrives on its own: wrap up
+            with Enter or the remote, or the hold screen comes up when the playlist ends.
           </p>
         )}
         <Toggle<MovieStartMode>
