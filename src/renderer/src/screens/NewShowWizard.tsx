@@ -317,9 +317,10 @@ export default function NewShowWizard({ onClose }: { onClose: () => void }): Rea
             </div>
             <p className="inspector-hint wizard-summary">
               {preview.items.length} slide group{preview.items.length === 1 ? '' : 's'},{' '}
-              {slideCount} slides, all with silly lines already written, plus a countdown to{' '}
-              {showtime}, a hold screen and a thanks card. Next, choose a folder to save the show
-              in; you can change anything afterwards.
+              {slideCount} slides, all with silly lines already written
+              {preview.trivia ? `, a ${preview.trivia.questions.length}-question trivia round` : ''}
+              , plus a countdown to {showtime}, a hold screen and a thanks card. Next, choose a
+              folder to save the show in; you can change anything afterwards.
             </p>
           </div>
         )}

@@ -2,13 +2,15 @@
 // by the New Show wizard and the template picker. Pure data + builders (no I/O).
 import type {
   AiPromptSettings,
-  SlideAiKind,
+  PlaylistItem,
+  TriviaItem,
   SlideBodyStyle,
   SlideFrame,
   SlideshowItem,
   TextAnimation
 } from './types'
 import { createSlideFrame, createSlideshowItem } from './factory'
+import { createTriviaItem, starterQuestions } from './trivia'
 
 export type ThemeNightId = 'classic' | 'halloween' | 'christmas' | 'kids' | 'birthday' | 'pta'
 
@@ -20,6 +22,7 @@ export type SectionId =
   | 'sponsors'
   | 'fundraiser'
   | 'events'
+  | 'trivia'
   | 'feature'
 
 /** What the wizard asks for; everything is optional and has a sensible fallback. */
@@ -79,10 +82,15 @@ export const SECTIONS: Record<SectionId, SectionInfo> = {
     label: 'Upcoming events & safety',
     description: 'What’s next, plus exits and restrooms'
   },
+  trivia: {
+    id: 'trivia',
+    label: 'Movie trivia',
+    description: 'Multiple-choice questions, then the answer'
+  },
   feature: {
     id: 'feature',
     label: "Tonight's feature",
-    description: 'Now showing, fun facts (via AI), enjoy the show'
+    description: 'Now showing, enjoy the show'
   }
 }
 
@@ -115,8 +123,8 @@ export const THEME_NIGHTS: ThemeNight[] = [
     event: 'Family movie night',
     holdMessage: 'The movie will be starting shortly',
     endMessage: 'Thanks for coming!',
-    sections: ['welcome', 'houseRules', 'snacks', 'feature'],
-    defaultSections: ['welcome', 'houseRules', 'snacks', 'feature']
+    sections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature'],
+    defaultSections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature']
   },
   {
     id: 'halloween',
@@ -129,8 +137,8 @@ export const THEME_NIGHTS: ThemeNight[] = [
     event: 'Halloween movie night',
     holdMessage: 'The movie will be starting shortly… if you dare',
     endMessage: 'Thanks for coming! Sweet screams 👻',
-    sections: ['welcome', 'houseRules', 'snacks', 'feature'],
-    defaultSections: ['welcome', 'houseRules', 'snacks', 'feature']
+    sections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature'],
+    defaultSections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature']
   },
   {
     id: 'christmas',
@@ -143,8 +151,8 @@ export const THEME_NIGHTS: ThemeNight[] = [
     event: 'Holiday movie night',
     holdMessage: 'The movie will be starting shortly. Get cozy!',
     endMessage: 'Thanks for coming! Happy holidays 🎄',
-    sections: ['welcome', 'houseRules', 'snacks', 'feature'],
-    defaultSections: ['welcome', 'houseRules', 'snacks', 'feature']
+    sections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature'],
+    defaultSections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature']
   },
   {
     id: 'kids',
@@ -157,8 +165,8 @@ export const THEME_NIGHTS: ThemeNight[] = [
     event: "Kids' movie night",
     holdMessage: 'The movie is starting really, really soon!',
     endMessage: 'Thanks for coming! Sweet dreams 🌙',
-    sections: ['welcome', 'houseRules', 'snacks', 'feature'],
-    defaultSections: ['welcome', 'houseRules', 'snacks', 'feature']
+    sections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature'],
+    defaultSections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature']
   },
   {
     id: 'birthday',
@@ -171,8 +179,8 @@ export const THEME_NIGHTS: ThemeNight[] = [
     event: 'Birthday party movie night',
     holdMessage: 'The movie will be starting shortly',
     endMessage: 'Thanks for celebrating with us! 🎉',
-    sections: ['welcome', 'houseRules', 'snacks', 'feature'],
-    defaultSections: ['welcome', 'houseRules', 'snacks', 'feature']
+    sections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature'],
+    defaultSections: ['welcome', 'houseRules', 'snacks', 'trivia', 'feature']
   },
   {
     id: 'pta',
@@ -192,6 +200,7 @@ export const THEME_NIGHTS: ThemeNight[] = [
       'sponsors',
       'fundraiser',
       'events',
+      'trivia',
       'feature'
     ],
     defaultSections: [
@@ -201,6 +210,7 @@ export const THEME_NIGHTS: ThemeNight[] = [
       'sponsors',
       'fundraiser',
       'events',
+      'trivia',
       'feature'
     ]
   }
@@ -230,7 +240,6 @@ interface SlideSpec {
   title: string
   lines: string[]
   style?: SlideBodyStyle
-  ai?: SlideAiKind
   durationSec?: number
 }
 
@@ -632,7 +641,6 @@ function featureGroup(theme: ThemeNightId): SlideSpec[] {
   }
   return [
     { title: 'Now Showing: {movie}', lines: nowShowing[theme] },
-    { title: 'Fun Facts: {movie}', lines: [], ai: 'trivia', durationSec: 8 },
     {
       title: 'Please Enjoy the Show',
       lines: [
@@ -740,6 +748,9 @@ function groupSpec(section: SectionId, theme: ThemeNightId, d: ShowDetails): Gro
       }
     case 'feature':
       return { name: "Tonight's Feature", slides: featureGroup(theme) }
+    case 'trivia':
+      // Not a slide group: buildTrivia makes it.
+      return null
   }
 }
 
@@ -780,14 +791,27 @@ export function buildSection(
     ...createSlideFrame('text', { ...style, durationSec: s.durationSec ?? 6 }),
     title: fillPlaceholders(s.title, details),
     subtitleOptions: s.lines.length ? s.lines.map((l) => fillPlaceholders(l, details)) : [''],
-    bodyStyle: s.style ?? 'rotate',
-    aiKind: s.ai ?? 'jokes'
+    bodyStyle: s.style ?? 'rotate'
   }))
   return { ...createSlideshowItem(), name: spec.name, frames }
 }
 
+/** A trivia round with the theme night's starter questions, in its look. */
+export function buildTrivia(themeId: ThemeNightId, paletteIndex = 0): TriviaItem {
+  const theme = findThemeNight(themeId)
+  return {
+    ...createTriviaItem(starterQuestions(themeId)),
+    name: 'Movie Trivia',
+    theme: theme.palette[paletteIndex % theme.palette.length]
+  }
+}
+
 export interface BuiltShow {
+  /** The slide groups (the trivia round, if chosen, is `trivia`). */
   items: SlideshowItem[]
+  trivia: TriviaItem | null
+  /** Everything in show order: the slide groups plus the trivia round. */
+  playlist: PlaylistItem[]
   /** Which built group each section became (to wire up the hold/end screens). */
   bySection: Partial<Record<SectionId, SlideshowItem>>
   aiPrompt: AiPromptSettings
@@ -803,12 +827,20 @@ export function buildShow(
 ): BuiltShow {
   const theme = findThemeNight(themeId)
   const items: SlideshowItem[] = []
+  const playlist: PlaylistItem[] = []
+  let trivia: TriviaItem | null = null
   const bySection: BuiltShow['bySection'] = {}
   for (const section of theme.sections) {
     if (!sections.includes(section)) continue
-    const item = buildSection(section, themeId, details, items.length)
+    if (section === 'trivia') {
+      trivia = buildTrivia(themeId, playlist.length)
+      playlist.push(trivia)
+      continue
+    }
+    const item = buildSection(section, themeId, details, playlist.length)
     if (!item) continue
     items.push(item)
+    playlist.push(item)
     bySection[section] = item
   }
   const movie = details.movieTitle.trim()
@@ -820,6 +852,8 @@ export function buildShow(
         : ''
   return {
     items,
+    trivia,
+    playlist,
     bySection,
     aiPrompt: {
       event: `${theme.event}${who}.${movie ? ` Tonight's movie: ${movie}` : ''}`,

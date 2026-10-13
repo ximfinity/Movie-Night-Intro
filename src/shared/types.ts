@@ -50,10 +50,6 @@ export type SlideFrameContent = 'text' | 'image'
  * list renders as two columns joined by a dotted leader. */
 export type SlideBodyStyle = 'rotate' | 'list'
 
-/** What the copy-and-paste AI prompt asks for on this slide: silly lines, or true trivia
- * about tonight's movie. */
-export type SlideAiKind = 'jokes' | 'trivia'
-
 /** How an image slide's picture fills the screen: 'fill' crops to cover it with a slow
  * zoom; 'fit' shows the whole picture, still (for memes, QR codes and anything with text
  * near the edges). */
@@ -75,13 +71,12 @@ export interface SlideFrame {
   backgroundImageDisplayName: string | null
   durationSec: number
   bodyStyle: SlideBodyStyle
-  aiKind: SlideAiKind
   imageFit: SlideImageFit
 }
 
 export interface BaseItem {
   id: string
-  type: 'video' | 'slideshow'
+  type: 'video' | 'slideshow' | 'trivia'
   /** Transition used when this item enters (transitioning away from the previous item),
    * and reused between frames when a slideshow item rotates. */
   transition: TransitionStyle
@@ -105,7 +100,36 @@ export interface SlideshowItem extends BaseItem {
   music: SlideMusic | null
 }
 
-export type PlaylistItem = VideoItem | SlideshowItem
+/** One multiple-choice question: shown with its choices, then on a second slide with the
+ * right answer revealed. */
+export interface TriviaQuestion {
+  id: string
+  question: string
+  /** 2 to 4 choices, shown as A, B, C, D. */
+  choices: string[]
+  /** Index into choices of the right answer. */
+  answer: number
+  /** Optional fun fact shown under the answer. */
+  note: string
+}
+
+/** A trivia-night round: each question is shown with its choices (with a countdown bar),
+ * then the answer slide reveals the right one. */
+export interface TriviaItem extends BaseItem {
+  type: 'trivia'
+  /** '' means "Movie Trivia". */
+  name: string
+  questions: TriviaQuestion[]
+  theme: SlideTheme
+  /** How long each question stays up before the answer is revealed. */
+  questionSec: number
+  /** How long each answer slide stays up. */
+  answerSec: number
+  /** Optional background track for the whole round (audio only). */
+  music: SlideMusic | null
+}
+
+export type PlaylistItem = VideoItem | SlideshowItem | TriviaItem
 
 /** Show-wide countdown, rendered as a persistent overlay on top of whatever is playing
  * (rather than occupying a slot in the playlist), from the start of the show until it completes. */

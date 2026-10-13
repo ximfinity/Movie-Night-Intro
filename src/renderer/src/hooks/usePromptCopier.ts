@@ -23,11 +23,7 @@ export function useSubtitlePrompt(): PromptBuilder {
     const frames = onlyFrame ? [onlyFrame] : promptableFrames(item)
     const known = new Set(frames.map((f) => normalizeTitleKey(f.title)))
     const titles = [
-      ...frames.map((f) => ({
-        title: f.title,
-        existing: f.subtitleOptions,
-        trivia: f.aiKind === 'trivia'
-      })),
+      ...frames.map((f) => ({ title: f.title, existing: f.subtitleOptions })),
       ...extraTitles
         .filter((t) => !known.has(normalizeTitleKey(t)))
         .map((t) => ({ title: t, existing: [] }))

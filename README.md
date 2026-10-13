@@ -17,20 +17,28 @@ transitions and animations.
   Kids' night, Birthday, PTA / school**), type the movie title and showtime, tick the
   sections you want, and get a complete, ready-to-run pre-show. **Every slide already has
   silly lines written**, in the theme's colors, with the countdown set to your showtime.
-- Sections include a welcome, house rules, snacks and **Tonight's Feature** (now showing,
-  a **Fun Facts** slide, enjoy the show). PTA nights add a **concessions price list**,
+- Sections include a welcome, house rules, snacks, a **movie trivia round** (starter
+  questions included; Halloween and Christmas get their own) and **Tonight's Feature** (now
+  showing, enjoy the show). PTA nights add a **concessions price list**,
   **sponsors & volunteer thank-yous**, a **fundraiser/raffle** group with a **QR code slide**
   made from your donation link, and **upcoming events & safety** (exits, restrooms, kids
   stay with a grown-up).
 - The wizard also fills in the AI prompt with tonight's movie, so one copy-and-paste adds
-  movie-specific jokes and real trivia (Fun Facts slides ask the AI for true facts, not
-  jokes).
+  movie-specific jokes.
 - Any built-in group can be added to an existing show from **📚 Template → ✨ Built-in**.
 
 ### Building the show
 
-- **Playlist editor** — mix video clips and slide groups in any order; drag to reorder.
+- **Playlist editor** — mix video clips, slide groups and trivia rounds in any order; drag
+  to reorder.
   New items are added right after the one you have selected.
+- **🧠 Trivia rounds** — trivia-night style: each question shows its **multiple choices
+  (A–D)** with a countdown bar, then a **second slide reveals the answer** (lit up in green)
+  with an optional fun fact. Set how long questions and answers stay up, the colors, the
+  transition and an optional background track. Edit questions right in the panel (click ●
+  next to the right answer), or **✨ Write with AI** about tonight's movie: one click with a
+  connected AI, or copy the prompt into any AI chat and paste the reply back. A new round
+  starts with family-movie starter questions.
 - **Slide groups** — a group holds one or more **slides that rotate** automatically, and
   can be given a name. Each slide is either a **text slide** (fixed title, a theme, an
   entrance animation, and an optional background image or GIF) or a full-bleed
@@ -75,7 +83,7 @@ transitions and animations.
   pick models (**Load models** lists what your account can use), **Test connection**, and
   click **Use**.
 - Then **✨ Write them with …** in Quick build & AI, and **✨ Write more** on any slide, get
-  lines and trivia in one click. Everything the AI writes is shown for review first.
+  lines in one click, and **✨ Write with AI** in a trivia round writes questions. Everything the AI writes is shown for review first.
 - Keys stay on the PC, encrypted by Windows, never in project files, and are sent only to
   the provider you chose; usage is billed to your own account. Without an AI connected,
   the copy-and-paste prompts keep working with any chat.
@@ -216,7 +224,8 @@ src/
    pick a folder for the project. (Or **+ Blank project**, or **Open Project** then
    **Save As…** to start from last month's show.)
 2. In **Tonight's Feature**, click **✨ Quick build & AI → Copy prompt**, paste it into your
-   favorite AI chat and paste its reply back for movie-specific jokes and trivia.
+   favorite AI chat and paste its reply back for movie-specific jokes. In **Movie Trivia**,
+   **✨ Write with AI** swaps in questions about your movie.
 3. Click **Feature Presentation** to choose the movie file or streaming link, and whether
    it starts automatically at showtime or waits for your go button.
 4. Add **🎬 Video Clips**, music or a pop-up video per group; drag to reorder.

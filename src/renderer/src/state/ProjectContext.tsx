@@ -33,6 +33,7 @@ import {
   type WizardPlan
 } from './context'
 import { buildShow } from '@shared/builtinTemplates'
+import { cloneTriviaItem } from '@shared/trivia'
 
 const HISTORY_LIMIT = 100
 /** Edits to the same field closer together than this collapse into one undo step. */
@@ -197,7 +198,7 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
         const movieTitle = plan.details.movieTitle.trim()
         const project: ProjectData = {
           ...base,
-          items: built.items,
+          items: built.playlist,
           library: { ...base.library, images },
           aiPrompt: built.aiPrompt,
           countdown: {
@@ -228,7 +229,7 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
           ...loadedState(dir, PROJECT_FILE_NAME, project),
           selectedItemId: landOn?.id ?? null,
           notice: by.feature
-            ? `Your show is ready! Every slide already has lines. To add jokes and real trivia about ${movieTitle || 'your movie'}, click ✨ Quick build & AI below and copy the prompt into any AI chat.`
+            ? `Your show is ready! Every slide already has lines. To add more jokes, click ✨ Quick build & AI below and copy the prompt into any AI chat.`
             : 'Your show is ready! Every slide already has lines; edit anything you like.'
         })
         return true
@@ -333,7 +334,11 @@ export function ProjectProvider({ children }: { children: ReactNode }): React.JS
         if (idx === -1) return items
         const original = items[idx]
         const clone: PlaylistItem =
-          original.type === 'slideshow' ? cloneSlideshowItem(original) : { ...original, id: uuid() }
+          original.type === 'slideshow'
+            ? cloneSlideshowItem(original)
+            : original.type === 'trivia'
+              ? cloneTriviaItem(original)
+              : { ...original, id: uuid() }
         const next = [...items]
         next.splice(idx + 1, 0, clone)
         return next

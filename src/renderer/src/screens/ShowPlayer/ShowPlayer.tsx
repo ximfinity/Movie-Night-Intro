@@ -23,6 +23,7 @@ import TransitionLayer from './TransitionLayer'
 import { enterDurationMs } from './transitions'
 import VideoStage from './VideoStage'
 import SlideshowStage from './SlideshowStage'
+import TriviaStage from './TriviaStage'
 import CountdownOverlay from './CountdownOverlay'
 import PopupVideoOverlay, { type PopupVideoHandle } from './PopupVideoOverlay'
 import ShowHud from './ShowHud'
@@ -80,6 +81,16 @@ function StageFor({
         <SlideshowStage
           item={item}
           dir={dir}
+          paused={paused}
+          music={music}
+          popupVideoRef={popupVideoRef}
+          onDone={onDone}
+        />
+      )
+    case 'trivia':
+      return (
+        <TriviaStage
+          item={item}
           paused={paused}
           music={music}
           popupVideoRef={popupVideoRef}

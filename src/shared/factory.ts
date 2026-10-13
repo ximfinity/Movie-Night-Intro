@@ -112,7 +112,6 @@ export function createSlideFrame(
     backgroundImage: null,
     backgroundImageDisplayName: null,
     bodyStyle: 'rotate',
-    aiKind: 'jokes',
     imageFit: 'fill'
   }
 }

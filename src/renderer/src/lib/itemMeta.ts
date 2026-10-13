@@ -1,5 +1,6 @@
 import type { PlaylistItem, SlideFrame, SlideshowItem } from '@shared/types'
 import { parseTimeOfDay } from '@shared/countdown'
+import { isPlayableQuestion } from '@shared/trivia'
 
 export function itemIcon(type: PlaylistItem['type']): string {
   switch (type) {
@@ -7,6 +8,8 @@ export function itemIcon(type: PlaylistItem['type']): string {
       return '🎬'
     case 'slideshow':
       return '📝'
+    case 'trivia':
+      return '🧠'
   }
 }
 
@@ -16,6 +19,8 @@ export function itemColorVar(type: PlaylistItem['type']): string {
       return 'var(--video-color)'
     case 'slideshow':
       return 'var(--slide-color)'
+    case 'trivia':
+      return 'var(--trivia-color)'
   }
 }
 
@@ -36,11 +41,17 @@ export function itemTitle(item: PlaylistItem): string {
       return item.displayName || 'Video clip'
     case 'slideshow':
       return item.name.trim() || autoGroupName(item)
+    case 'trivia':
+      return item.name.trim() || 'Movie Trivia'
   }
 }
 
 export function itemTypeLabel(item: PlaylistItem): string {
-  return item.type === 'video' ? 'Video clip' : 'Slide group'
+  return item.type === 'video'
+    ? 'Video clip'
+    : item.type === 'trivia'
+      ? 'Trivia round'
+      : 'Slide group'
 }
 
 /** One-line summary of a slide for the collapsed slide list. */
@@ -59,6 +70,15 @@ export function itemSubtitle(item: PlaylistItem): string {
       const bits = [`${totalSec}s`]
       if (item.music) bits.push('with music')
       if (item.frames.some((f) => f.backgroundImage)) bits.push('with image')
+      return bits.join(' · ')
+    }
+    case 'trivia': {
+      const n = item.questions.filter(isPlayableQuestion).length
+      const bits = [
+        `${n} question${n === 1 ? '' : 's'}`,
+        formatDuration(n * (item.questionSec + item.answerSec))
+      ]
+      if (item.music) bits.push('with music')
       return bits.join(' · ')
     }
   }

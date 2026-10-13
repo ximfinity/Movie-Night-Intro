@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { collectMediaRefs, normalizeProject } from './projectFormat'
-import type { SlideshowItem, VideoItem } from './types'
+import type { SlideshowItem, TriviaItem, VideoItem } from './types'
 
 describe('normalizeProject', () => {
   it('rejects JSON that is not a project', () => {
@@ -91,9 +91,9 @@ describe('normalizeProject', () => {
     })
     const frames = (p.items[0] as SlideshowItem).frames
     expect(frames[0].bodyStyle).toBe('list')
-    expect(frames[0].aiKind).toBe('trivia')
+    // Trivia now has its own playlist item; the old per-slide setting is dropped.
+    expect(frames[0]).not.toHaveProperty('aiKind')
     expect(frames[1].bodyStyle).toBe('rotate')
-    expect(frames[1].aiKind).toBe('jokes')
     expect(p.feature).toMatchObject({
       source: 'file',
       filePath: 'D:\\Movies\\Goonies.mkv',
@@ -169,5 +169,37 @@ describe('collectMediaRefs', () => {
       'video:popup.mp4',
       'video:thx.mp4'
     ])
+  })
+})
+
+describe('trivia rounds', () => {
+  it('load with repaired questions, timings and audio-only music', () => {
+    const p = normalizeProject({
+      items: [
+        {
+          type: 'trivia',
+          name: 'Round 1',
+          questionSec: 9999,
+          music: { kind: 'video', fileName: 'clip.mp4' },
+          questions: [
+            { question: 'Who?', choices: ['a', 'b', 'c', 'd', 'e'], answer: 7, note: 'x' },
+            { question: 'Where?', choices: ['here', 3] },
+            'junk'
+          ]
+        },
+        { type: 'trivia', music: { kind: 'audio', fileName: 'song.mp3' } }
+      ]
+    })
+    const [round, empty] = p.items as TriviaItem[]
+    expect(round.type).toBe('trivia')
+    expect(round.questionSec).toBe(120)
+    expect(round.music).toBeNull()
+    expect(round.questions).toHaveLength(2)
+    expect(round.questions[0].choices).toEqual(['a', 'b', 'c', 'd'])
+    expect(round.questions[0].answer).toBe(3)
+    expect(round.questions[1].choices).toEqual(['here', '', '', ''])
+    expect(empty.questions).toHaveLength(1)
+    expect(empty.music?.fileName).toBe('song.mp3')
+    expect(collectMediaRefs(p).map((r) => r.fileName)).toContain('song.mp3')
   })
 })

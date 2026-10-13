@@ -3,6 +3,7 @@ import { COUNTDOWN_SELECTION_ID, FEATURE_SELECTION_ID } from '../../state/contex
 import { itemColorVar, itemIcon, itemTitle, itemTypeLabel } from '../../lib/itemMeta'
 import VideoInspector from './VideoInspector'
 import SlideshowInspector from './SlideshowInspector'
+import TriviaInspector from './TriviaInspector'
 import CountdownInspector from './CountdownInspector'
 import FeatureInspector from './FeatureInspector'
 import './inspectors.css'
@@ -85,9 +86,10 @@ export default function InspectorPanel({
           <div className="inspector-type">{itemTypeLabel(item)}</div>
         </div>
       </div>
-      <div className={`inspector-body ${item.type === 'slideshow' ? 'inspector-body-wide' : ''}`}>
+      <div className={`inspector-body ${item.type !== 'video' ? 'inspector-body-wide' : ''}`}>
         {item.type === 'video' && <VideoInspector item={item} />}
         {item.type === 'slideshow' && <SlideshowInspector item={item} />}
+        {item.type === 'trivia' && <TriviaInspector item={item} />}
       </div>
     </div>
   )

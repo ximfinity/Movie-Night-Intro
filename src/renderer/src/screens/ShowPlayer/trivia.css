@@ -1,0 +1,170 @@
+/* Trivia rounds. Sized in container units (cqw/cqh) like the slides, so the editor
+   preview matches the show. */
+
+.trivia-stage {
+  position: relative;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3.2cqh;
+  padding: 7cqh 9cqw 9cqh;
+  text-align: center;
+}
+
+.trivia-kicker {
+  font-size: 1.5cqw;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.trivia-question {
+  max-width: 76cqw;
+  font-size: 3.4cqw;
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  text-shadow: 0 0.4cqh 2.8cqh rgba(0, 0, 0, 0.35);
+}
+
+.trivia-reveal .trivia-question {
+  font-size: 2.3cqw;
+  opacity: 0.8;
+}
+
+.trivia-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2cqh 2cqw;
+  width: 72cqw;
+}
+
+.trivia-choices-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trivia-choices-3 .trivia-choice:last-child {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: calc(50% - 1cqw);
+}
+
+.trivia-choice {
+  display: flex;
+  align-items: center;
+  gap: 1.2cqw;
+  padding: 1.6cqh 1.4cqw;
+  border-radius: 1cqw;
+  background: rgba(0, 0, 0, 0.28);
+  border: 0.15cqw solid rgba(255, 255, 255, 0.14);
+  font-size: 1.9cqw;
+  font-weight: 600;
+  text-align: left;
+  animation: triviaChoiceIn 0.5s ease both;
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
+}
+
+.trivia-letter {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 3.4cqw;
+  height: 3.4cqw;
+  border-radius: 50%;
+  color: #14101f;
+  font-size: 1.7cqw;
+  font-weight: 900;
+}
+
+.trivia-choice-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trivia-reveal .trivia-choice {
+  animation: none;
+}
+
+.trivia-choice-wrong {
+  opacity: 0.32;
+}
+
+.trivia-choice-right {
+  background: #1f9d55;
+  border-color: #6ff0a6;
+  color: #fff;
+  box-shadow: 0 0 3cqw rgba(64, 220, 130, 0.45);
+  animation: triviaRight 0.7s ease 0.15s both !important;
+}
+
+.trivia-choice-right .trivia-letter {
+  background: #fff;
+  color: #1f9d55;
+}
+
+.trivia-note {
+  max-width: 64cqw;
+  font-size: 1.6cqw;
+  line-height: 1.45;
+  opacity: 0.9;
+  animation: triviaChoiceIn 0.6s ease 0.6s both;
+}
+
+.trivia-note::before {
+  content: '💡 ';
+}
+
+.trivia-timer {
+  position: absolute;
+  left: 9cqw;
+  right: 9cqw;
+  bottom: 5cqh;
+  height: 1cqh;
+  border-radius: 1cqh;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.trivia-timer-fill {
+  height: 100%;
+  transform-origin: left center;
+  animation-name: triviaTimer;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+
+@keyframes triviaTimer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes triviaChoiceIn {
+  from {
+    opacity: 0;
+    transform: translateY(1.5cqh);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes triviaRight {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

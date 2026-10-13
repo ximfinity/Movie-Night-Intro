@@ -14,8 +14,11 @@ import type {
   SlideshowItem,
   TextAnimation,
   TransitionStyle,
+  TriviaItem,
+  TriviaQuestion,
   VideoItem
 } from './types'
+import { createTriviaQuestion, MAX_CHOICES } from './trivia'
 import {
   createDefaultAiPrompt,
   createDefaultCountdown,
@@ -71,7 +74,6 @@ function normalizeSlideFrame(raw: Raw): SlideFrame {
     backgroundImageDisplayName: bg ? str(raw.backgroundImageDisplayName, bg) : null,
     durationSec: num(raw.durationSec, DEFAULT_SLIDE_STYLE.durationSec, 1, 120),
     bodyStyle: raw.bodyStyle === 'list' ? 'list' : 'rotate',
-    aiKind: raw.aiKind === 'trivia' ? 'trivia' : 'jokes',
     imageFit:
       raw.imageFit === 'fit' ||
       // QR slides made by v1.3's New Show wizard predate this setting; a cropped QR code
@@ -144,6 +146,44 @@ function normalizeSlideshow(raw: Raw, frames: SlideFrame[]): SlideshowItem {
   }
 }
 
+function normalizeTriviaQuestion(raw: Raw): TriviaQuestion {
+  const choices = (Array.isArray(raw.choices) ? raw.choices : [])
+    .slice(0, MAX_CHOICES)
+    .map((c) => (typeof c === 'string' ? c : ''))
+  while (choices.length < MAX_CHOICES) choices.push('')
+  return createTriviaQuestion({
+    id: str(raw.id, '') || uuid(),
+    question: str(raw.question, ''),
+    choices,
+    answer: Math.round(num(raw.answer, 0, 0, MAX_CHOICES - 1)),
+    note: str(raw.note, '')
+  })
+}
+
+function normalizeTrivia(raw: Raw): TriviaItem {
+  const seen = new Set<string>()
+  const questions = (Array.isArray(raw.questions) ? raw.questions.filter(isObj) : [])
+    .map(normalizeTriviaQuestion)
+    .map((q) => {
+      if (seen.has(q.id)) q = { ...q, id: uuid() }
+      seen.add(q.id)
+      return q
+    })
+  const music = normalizeSlideMusic(raw.music)
+  return {
+    id: str(raw.id, '') || uuid(),
+    type: 'trivia',
+    name: str(raw.name, ''),
+    transition: oneOf(raw.transition, TRANSITIONS, 'crossfade'),
+    questions: questions.length > 0 ? questions : [createTriviaQuestion()],
+    theme: str(raw.theme, 'midnight') || 'midnight',
+    questionSec: num(raw.questionSec, 15, 3, 120),
+    answerSec: num(raw.answerSec, 8, 2, 60),
+    // A trivia round's music is a background track only (it needs the whole screen).
+    music: music?.kind === 'audio' ? music : null
+  }
+}
+
 export function normalizeItem(raw: unknown): PlaylistItem | null {
   if (!isObj(raw)) return null
   if (raw.type === 'video') {
@@ -162,6 +202,7 @@ export function normalizeItem(raw: unknown): PlaylistItem | null {
     const rawFrames = Array.isArray(raw.frames) ? raw.frames.filter(isObj) : []
     return normalizeSlideshow(raw, rawFrames.map(normalizeSlideFrame))
   }
+  if (raw.type === 'trivia') return normalizeTrivia(raw)
   // Pre-slideshow format: a single slide item with its own music.
   if (raw.type === 'slide')
     return normalizeSlideshow(raw, [normalizeSlideFrame({ ...raw, id: uuid() })])
@@ -236,6 +277,8 @@ export function collectMediaRefs(project: ProjectData): MediaRef[] {
   for (const item of project.items) {
     if (item.type === 'video') {
       add('video', item.fileName, item.displayName)
+    } else if (item.type === 'trivia') {
+      if (item.music) add('audio', item.music.fileName, item.music.displayName)
     } else {
       if (item.music) add(item.music.kind, item.music.fileName, item.music.displayName)
       for (const frame of item.frames) {

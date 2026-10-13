@@ -5,6 +5,7 @@ import {
   SECTIONS,
   THEME_NIGHTS,
   buildSection,
+  buildTrivia,
   findThemeNight,
   type SectionId,
   type ThemeNightId
@@ -21,7 +22,12 @@ function BuiltinTemplates({ onInserted }: { onInserted: () => void }): React.JSX
   const theme = findThemeNight(themeId)
 
   function insert(section: SectionId): void {
-    const groups = project!.items.filter((it) => it.type === 'slideshow').length
+    const groups = project!.items.filter((it) => it.type !== 'video').length
+    if (section === 'trivia') {
+      addItem(buildTrivia(themeId, groups))
+      onInserted()
+      return
+    }
     const item = buildSection(
       section,
       themeId,
@@ -50,6 +56,27 @@ function BuiltinTemplates({ onInserted }: { onInserted: () => void }): React.JSX
       </div>
       <ul className="template-list">
         {theme.sections.map((id) => {
+          if (id === 'trivia') {
+            const trivia = buildTrivia(themeId)
+            return (
+              <li key={id} className="template-card">
+                <span
+                  className="builtin-swatch"
+                  style={{ background: findSlideTheme(trivia.theme).background }}
+                />
+                <div className="template-card-text">
+                  <div className="template-card-name">{SECTIONS[id].label}</div>
+                  <div className="template-card-meta">
+                    {trivia.questions.length} questions · {SECTIONS[id].description}
+                  </div>
+                  <div className="template-card-sample">{trivia.questions[0].question}</div>
+                </div>
+                <button className="btn btn-primary" onClick={() => insert(id)}>
+                  Insert
+                </button>
+              </li>
+            )
+          }
           const preview = buildSection(id, themeId, {
             ...EMPTY_DETAILS,
             movieTitle: project!.feature.title

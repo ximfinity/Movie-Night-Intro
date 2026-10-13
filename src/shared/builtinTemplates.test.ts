@@ -49,10 +49,13 @@ describe('built-in theme nights', () => {
     for (const night of THEME_NIGHTS) {
       for (const section of night.sections) {
         const item = buildSection(section, night.id, { ...EMPTY_DETAILS, movieTitle: 'Jaws' })
+        if (section === 'trivia') {
+          expect(item).toBeNull()
+          continue
+        }
         expect(item, `${night.id}/${section}`).not.toBeNull()
         for (const f of item!.frames) {
           expect(f.title, `${night.id}/${section}`).not.toMatch(/[{}]/)
-          if (f.aiKind === 'trivia') continue
           const lines = f.subtitleOptions.filter((s) => s.trim())
           expect(lines.length, `${night.id}/${section}/${f.title}`).toBeGreaterThan(0)
           for (const l of lines) {
@@ -64,8 +67,8 @@ describe('built-in theme nights', () => {
     }
   })
 
-  it('makes a PTA price list and trivia slide the AI fills in', () => {
-    const show = buildShow('pta', ['concessions', 'feature'], {
+  it('makes a PTA price list and a trivia round before the feature', () => {
+    const show = buildShow('pta', ['concessions', 'trivia', 'feature'], {
       ...EMPTY_DETAILS,
       movieTitle: 'Moana',
       orgName: 'Lincoln Elementary',
@@ -74,8 +77,9 @@ describe('built-in theme nights', () => {
     const menu = show.bySection.concessions!.frames[0]
     expect(menu.bodyStyle).toBe('list')
     expect(menu.subtitleOptions).toEqual(['Popcorn | $3'])
-    const trivia = show.bySection.feature!.frames.find((f) => f.aiKind === 'trivia')!
-    expect(trivia.title).toBe('Fun Facts: Moana')
+    expect(show.playlist.map((i) => i.type)).toEqual(['slideshow', 'trivia', 'slideshow'])
+    expect(show.trivia!.questions.length).toBeGreaterThanOrEqual(4)
+    expect(show.items).toHaveLength(2)
     expect(show.aiPrompt.event).toBe(
       "School PTA family movie night at Lincoln Elementary. Tonight's movie: Moana"
     )

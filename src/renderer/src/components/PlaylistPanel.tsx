@@ -11,6 +11,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useProject } from '../state/useProject'
 import { COUNTDOWN_SELECTION_ID, FEATURE_SELECTION_ID } from '../state/context'
 import { createSlideshowItem, createVideoItem, hasFeatureMovie } from '@shared/factory'
+import { createTriviaItem, starterQuestions } from '@shared/trivia'
 import type { FeatureConfig } from '@shared/types'
 import { formatClockLabel, formatDuration } from '../lib/itemMeta'
 import SortableItemCard from './SortableItemCard'
@@ -92,6 +93,15 @@ export default function PlaylistPanel(): React.JSX.Element {
             📝 Slide Group
           </button>
           <button
+            className="btn add-btn add-trivia"
+            onClick={() =>
+              addItem({ ...createTriviaItem(starterQuestions()), name: 'Movie Trivia' })
+            }
+            title="A trivia-night round: multiple-choice questions, each followed by its answer"
+          >
+            🧠 Trivia
+          </button>
+          <button
             className="btn add-btn add-template"
             onClick={() => setShowTemplates(true)}
             title="Insert a ready-made slide group (theme nights) or one from your template library"
@@ -105,8 +115,8 @@ export default function PlaylistPanel(): React.JSX.Element {
           <div className="playlist-empty">
             <p>Your playlist is empty.</p>
             <p className="playlist-empty-hint">
-              Add video clips and slide groups above — the countdown overlay above plays on top
-              automatically, so you don&apos;t need to add it here.
+              Add video clips, slide groups and trivia above — the countdown overlay above plays on
+              top automatically, so you don&apos;t need to add it here.
             </p>
           </div>
         ) : (

@@ -699,17 +699,6 @@ function SubtitleEditor({
             All lines as a list
           </button>
         </div>
-        {!isList && (
-          <select
-            className="ai-kind-select"
-            value={frame.aiKind}
-            title="What the AI prompt asks for on this slide"
-            onChange={(e) => patch({ aiKind: e.target.value as SlideFrame['aiKind'] })}
-          >
-            <option value="jokes">AI writes: silly lines</option>
-            <option value="trivia">AI writes: movie trivia</option>
-          </select>
-        )}
       </div>
       <span className="field-label">
         {isList ? 'Lines' : 'Subtitle'}{' '}
