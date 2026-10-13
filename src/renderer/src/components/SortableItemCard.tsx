@@ -1,16 +1,19 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { PlaylistItem } from '@shared/types'
+import type { ItemRuntime } from '@shared/runtime'
 import { useProject } from '../state/useProject'
 import { itemColorVar, itemIcon, itemSubtitle, itemTitle } from '../lib/itemMeta'
 import './SortableItemCard.css'
 
 export default function SortableItemCard({
   item,
-  index
+  index,
+  runtime
 }: {
   item: PlaylistItem
   index: number
+  runtime?: ItemRuntime
 }): React.JSX.Element {
   const { selectedItemId, selectItem, removeItem, duplicateItem } = useProject()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -41,7 +44,7 @@ export default function SortableItemCard({
       </span>
       <div className="item-card-text">
         <div className="item-card-title">{itemTitle(item)}</div>
-        <div className="item-card-subtitle">{itemSubtitle(item)}</div>
+        <div className="item-card-subtitle">{itemSubtitle(item, runtime)}</div>
       </div>
       <div className="item-card-actions">
         <button

@@ -32,6 +32,11 @@ transitions and animations.
 - **Playlist editor** — mix video clips, slide groups and trivia rounds in any order; drag
   to reorder.
   New items are added right after the one you have selected.
+- **Running time** — the playlist shows how long the pre-show runs (slide timings, trivia
+  question and answer times, and each video's real length), and every card shows its own
+  length. With a showtime countdown it tells you the latest time to start so everything
+  plays at least once before showtime; with a fixed-length countdown it says how far the
+  playlist runs past (or short of) zero.
 - **🧠 Trivia rounds** — trivia-night style: each question shows its **multiple choices
   (A–D)** with a countdown bar, then a **second slide reveals the answer** (lit up in green)
   with an optional fun fact. Set how long questions and answers stay up, the colors, the

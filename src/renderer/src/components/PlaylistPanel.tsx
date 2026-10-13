@@ -12,7 +12,9 @@ import { useProject } from '../state/useProject'
 import { COUNTDOWN_SELECTION_ID, FEATURE_SELECTION_ID } from '../state/context'
 import { createSlideshowItem, createVideoItem, hasFeatureMovie } from '@shared/factory'
 import { createTriviaItem, starterQuestions } from '@shared/trivia'
-import type { FeatureConfig } from '@shared/types'
+import type { CountdownConfig, FeatureConfig, PlaylistItem } from '@shared/types'
+import { estimateRuntime, showtimeFit, type RuntimeEstimate } from '@shared/runtime'
+import { useVideoDurations } from '../lib/videoDurations'
 import { formatClockLabel, formatDuration } from '../lib/itemMeta'
 import SortableItemCard from './SortableItemCard'
 import { TemplatePickerDialog } from './TemplateDialogs'
@@ -24,12 +26,14 @@ export default function PlaylistPanel(): React.JSX.Element {
     useProject()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }))
   const [showTemplates, setShowTemplates] = useState(false)
+  const { durations, pending } = useVideoDurations(dir, videoFilesOf(project?.items ?? []))
 
   if (!project || !dir) return <></>
 
   const items = project.items
   const countdown = project.countdown
   const feature = project.feature
+  const runtime = estimateRuntime(items, durations)
 
   async function handleAddVideo(): Promise<void> {
     const files = await importToLibrary('video')
@@ -111,6 +115,10 @@ export default function PlaylistPanel(): React.JSX.Element {
         </div>
         {showTemplates && <TemplatePickerDialog onClose={() => setShowTemplates(false)} />}
 
+        {items.length > 0 && (
+          <RuntimeSummary runtime={runtime} pending={pending} countdown={countdown} />
+        )}
+
         {items.length === 0 ? (
           <div className="playlist-empty">
             <p>Your playlist is empty.</p>
@@ -131,13 +139,79 @@ export default function PlaylistPanel(): React.JSX.Element {
             >
               <ul className="playlist-list">
                 {items.map((item, index) => (
-                  <SortableItemCard key={item.id} item={item} index={index} />
+                  <SortableItemCard
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    runtime={runtime.items[index]}
+                  />
                 ))}
               </ul>
             </SortableContext>
           </DndContext>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Every video file whose length affects the running time. */
+function videoFilesOf(items: PlaylistItem[]): string[] {
+  return items.flatMap((it) =>
+    it.type === 'video'
+      ? [it.fileName]
+      : it.type === 'slideshow' && it.music?.kind === 'video' && it.music.loopSlidesUntilEnd
+        ? [it.music.fileName]
+        : []
+  )
+}
+
+/** "Pre-show runs about 14:20", and how that lines up with the countdown. */
+function RuntimeSummary({
+  runtime,
+  pending,
+  countdown
+}: {
+  runtime: RuntimeEstimate
+  pending: number
+  countdown: CountdownConfig
+}): React.JSX.Element {
+  const fit = showtimeFit(runtime.totalSec, countdown)
+  const failed = runtime.unknownCount - pending
+  const total = formatDuration(runtime.totalSec)
+  return (
+    <div className="runtime-summary" aria-live="polite">
+      <div className="runtime-total">
+        ⏱ Pre-show runs about <strong>{total}</strong>
+        {pending > 0 && <span className="runtime-note"> · measuring videos…</span>}
+      </div>
+      {fit?.mode === 'clock' &&
+        (fit.loops ? (
+          <p>
+            It repeats until showtime ({formatClockLabel(fit.showtime)}). To get through it all at
+            least once, start by <strong>{formatClockLabel(fit.latestStart)}</strong>.
+          </p>
+        ) : (
+          <p>
+            To finish right at showtime ({formatClockLabel(fit.showtime)}), start at{' '}
+            <strong>{formatClockLabel(fit.latestStart)}</strong>.
+          </p>
+        ))}
+      {fit?.mode === 'duration' && (
+        <p>
+          {fit.overSec > 0
+            ? `That's ${formatDuration(fit.overSec)} longer than the ${formatDuration(fit.countdownSec)} countdown, so it keeps playing after zero.`
+            : fit.overSec < 0
+              ? `That ends ${formatDuration(-fit.overSec)} before the ${formatDuration(fit.countdownSec)} countdown reaches zero.`
+              : `That matches the ${formatDuration(fit.countdownSec)} countdown exactly.`}
+        </p>
+      )}
+      {failed > 0 && (
+        <p className="runtime-note">
+          {failed} video{failed === 1 ? '' : 's'} couldn&apos;t be measured and{' '}
+          {failed === 1 ? "isn't" : "aren't"} counted.
+        </p>
+      )}
     </div>
   )
 }

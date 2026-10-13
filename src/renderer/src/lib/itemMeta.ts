@@ -1,6 +1,7 @@
 import type { PlaylistItem, SlideFrame, SlideshowItem } from '@shared/types'
 import { parseTimeOfDay } from '@shared/countdown'
 import { isPlayableQuestion } from '@shared/trivia'
+import type { ItemRuntime } from '@shared/runtime'
 
 export function itemIcon(type: PlaylistItem['type']): string {
   switch (type) {
@@ -61,13 +62,22 @@ export function frameLabel(frame: SlideFrame): string {
   return frame.title.trim() || 'Untitled slide'
 }
 
-export function itemSubtitle(item: PlaylistItem): string {
+/** `runtime` (from shared/runtime) adds measured video lengths when known. */
+export function itemSubtitle(item: PlaylistItem, runtime?: ItemRuntime): string {
+  const length = runtime && !runtime.unknown ? formatDuration(runtime.sec) : null
   switch (item.type) {
     case 'video':
-      return `Video · volume ${Math.round(item.volume * 100)}%`
+      return `${length ?? 'Video'} · volume ${Math.round(item.volume * 100)}%`
     case 'slideshow': {
+      const loops = item.music?.kind === 'video' && item.music.loopSlidesUntilEnd
       const totalSec = item.frames.reduce((sum, f) => sum + f.durationSec, 0)
-      const bits = [`${totalSec}s`]
+      const bits = [
+        loops
+          ? length
+            ? `${length} (until the video ends)`
+            : 'until the video ends'
+          : formatDuration(totalSec)
+      ]
       if (item.music) bits.push('with music')
       if (item.frames.some((f) => f.backgroundImage)) bits.push('with image')
       return bits.join(' · ')
