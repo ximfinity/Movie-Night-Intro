@@ -16,6 +16,20 @@ export interface PromptOptions {
   maxChars: number
 }
 
+/** Joke-writing guidance shared by every prompt that asks an AI to be funny (subtitles and
+ * meme captions), so lines are real jokes that make sense, not random silliness. */
+export const JOKE_CRAFT_RULES: string[] = [
+  'How to make every line land:',
+  "- Every line must be a real joke that a 10-year-old and a grandparent both get on the first read. If it needs explaining, or you can't say exactly why it is funny, throw it out.",
+  '- Lean on puns: about half the lines should be wordplay on a word that truly belongs to the topic or to the movies (popcorn, butter, kernel, pop, reel, scene, screen, sequel, credits, trailer, cast, plot, roll). The pun word must fit the sentence naturally and work with both meanings.',
+  '- The rest can be over-the-top exaggeration, fake official rules or funny consequences, as long as they still make sense in real life.',
+  '- Stay on topic: each line clearly connects to its title. No random objects or animals, no surreal nonsense, no two jokes squashed into one line.',
+  '- Plain, natural, everyday English in complete sentences. No made-up words unless the pun is obvious.',
+  '- Good examples: "Silence Your Phones" → "Your ringtone is not part of the soundtrack"; "Snacks Are Ready" → "Butter late than never"; "No Spoilers" → "What happens in the movie stays in the movie" (write new ones; don\'t reuse these).',
+  '- Bad examples (never write lines like these): "Your phone dreams of popcorn rain" (random, no joke); "Kernel knowledge is cinema power" (forced pun that makes no sense).',
+  '- Before replying, privately draft about three times as many as asked and keep only the funniest ones that make the most sense. Show only the final picks.'
+]
+
 /** Most "already used" lines listed in a prompt. */
 export const MAX_USED_LINES = 150
 
@@ -34,7 +48,7 @@ export function buildSubtitlePrompt(opts: PromptOptions): string {
   return [
     'You are writing on-screen text for a pre-show slideshow at a family movie night.',
     '',
-    'Each slide has a fixed title. Under the title, one short, silly subtitle appears, picked at random each time the slide is shown. Write subtitles for every title listed below.',
+    'Each slide has a fixed title. Under the title, one short, funny subtitle appears, picked at random each time the slide is shown. Write subtitles for every title listed below.',
     '',
     `Event: ${opts.event.trim() || 'A family movie night'}`,
     `Tone: ${opts.tone.trim() || 'silly and punny'}`,
@@ -46,10 +60,11 @@ export function buildSubtitlePrompt(opts: PromptOptions): string {
     '- Family-friendly for all ages: no insults, innuendo, swearing or scary content.',
     `- At most ${opts.maxChars} characters each, so it fits on one line on screen.`,
     '- Each subtitle must make sense on its own under its title.',
-    '- Mix the joke styles: puns, over-the-top exaggeration, fake official rules, absurd consequences.',
     `- Don't reuse the title's wording, and don't repeat anything under "Already used".`,
     '- No emojis, hashtags, numbering, bullets or quotation marks.',
     "- No spoilers about tonight's movie.",
+    '',
+    ...JOKE_CRAFT_RULES,
     '',
     'Already used (do not repeat):',
     ...(used.length > 0 ? used : ['none']),

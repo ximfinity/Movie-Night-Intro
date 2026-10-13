@@ -54,3 +54,14 @@ describe('meme prompts', () => {
     }
   })
 })
+
+describe('meme caption joke guidance', () => {
+  it('asks for one set-up-and-punchline joke that makes sense', () => {
+    const p = buildMemeCaptionPrompt({ context: '', event: '', tone: '', count: 4 })
+    expect(p).toMatch(/Top and bottom read as ONE joke/)
+    expect(p).toMatch(/Lean on puns/)
+    expect(p).toMatch(/Good examples: "Me: I will not eat all the popcorn"/)
+    expect(p).not.toMatch(/Butter late than never/)
+    expect(p).not.toMatch(/\n\n\n/)
+  })
+})

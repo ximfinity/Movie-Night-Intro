@@ -167,3 +167,26 @@ describe('planSubtitleImport', () => {
     expect(plan[0].lines).toEqual(['a', 'b'])
   })
 })
+
+describe('joke quality guidance', () => {
+  const p = buildSubtitlePrompt({
+    titles: [{ title: 'Snacks Are Ready', existing: [] }],
+    event: '',
+    tone: '',
+    perTitle: 5,
+    maxChars: 60
+  })
+
+  it('pushes for puns that make sense, with examples', () => {
+    expect(p).toMatch(/Lean on puns/)
+    expect(p).toMatch(/get on the first read/)
+    expect(p).toMatch(/Good examples:.*Butter late than never/)
+    expect(p).toMatch(/Bad examples/)
+    expect(p).toMatch(/draft about three times as many/)
+  })
+
+  it('keeps the reply format as the last thing the AI reads', () => {
+    expect(p.indexOf('How to make every line land')).toBeLessThan(p.indexOf('Reply with ONLY'))
+    expect(p.trim().endsWith('```')).toBe(true)
+  })
+})

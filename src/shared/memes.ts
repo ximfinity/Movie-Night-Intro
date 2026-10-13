@@ -1,4 +1,5 @@
 // Meme slides: classic top/bottom captions over a picture, rendered into an image slide.
+import { JOKE_CRAFT_RULES } from './aiPrompt'
 
 export interface MemeCaption {
   top: string
@@ -36,6 +37,13 @@ export function buildMemeCaptionPrompt(opts: {
     '- Family-friendly for all ages.',
     '- Each line at most 40 characters.',
     "- No spoilers about tonight's movie. No hashtags or emojis.",
+    '- Top and bottom read as ONE joke: the top sets up a relatable movie-night moment, the bottom is the punchline twist.',
+    '',
+    ...JOKE_CRAFT_RULES.map((l) =>
+      l.startsWith('- Good examples')
+        ? '- Good examples: "Me: I will not eat all the popcorn" | "Also me: before the trailers end"; "Phone on silent" | "Popcorn on loud" (write new ones; don\'t reuse these).'
+        : l
+    ),
     '',
     `Reply with exactly ${opts.count} captions, one per line, in this format:`,
     'TOP: first line | BOTTOM: second line'
