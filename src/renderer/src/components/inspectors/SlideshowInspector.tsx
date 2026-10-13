@@ -19,6 +19,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type {
   ImportedMediaFile,
   OverlayPosition,
+  PopupVideoLayout,
   SlideFrame,
   SlideMusicKind,
   SlideshowItem,
@@ -44,6 +45,12 @@ const ANIMATIONS: { value: TextAnimation; label: string }[] = [
   { value: 'slide-in', label: 'Slide in' },
   { value: 'zoom-in', label: 'Zoom in' },
   { value: 'typewriter', label: 'Typewriter' }
+]
+
+const VIDEO_LAYOUTS: { value: PopupVideoLayout; label: string }[] = [
+  { value: 'video-left', label: 'Side by side: video left, text right' },
+  { value: 'video-right', label: 'Side by side: video right, text left' },
+  { value: 'corner', label: 'Pop-up box in a corner (over the slides)' }
 ]
 
 const POSITIONS: { value: OverlayPosition; label: string }[] = [
@@ -226,6 +233,7 @@ export default function SlideshowInspector({ item }: { item: SlideshowItem }): R
             dir={dir!}
             index={expandedIndex}
             count={item.frames.length}
+            music={item.music}
           />
         )}
       </div>
@@ -251,6 +259,7 @@ function MusicSettings({ item }: { item: SlideshowItem }): React.JSX.Element {
               volume: 0.8,
               fadeInSec: 1.5,
               fadeOutSec: 1.5,
+              layout: 'video-left',
               position: 'bottom-left',
               sizeScale: 3,
               loopSlidesUntilEnd: false
@@ -280,8 +289,8 @@ function MusicSettings({ item }: { item: SlideshowItem }): React.JSX.Element {
             </button>
           </div>
           <p className="inspector-hint">
-            An audio track plays quietly in the background. A pop-up video plays with its picture in
-            a corner box while the slides rotate.
+            An audio track plays quietly in the background. A pop-up video plays with its picture
+            while the slides rotate: side by side with the text, or in a corner box.
           </p>
         </>
       )}
@@ -338,38 +347,66 @@ function MusicSettings({ item }: { item: SlideshowItem }): React.JSX.Element {
           {music.kind === 'video' && (
             <>
               <label className="field">
-                <span className="field-label">Corner of the screen</span>
+                <span className="field-label">Layout</span>
                 <select
-                  value={music.position}
+                  value={music.layout}
                   onChange={(e) =>
                     updateItem(item.id, {
-                      music: { ...music, position: e.target.value as OverlayPosition }
+                      music: { ...music, layout: e.target.value as PopupVideoLayout }
                     })
                   }
                 >
-                  {POSITIONS.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
+                  {VIDEO_LAYOUTS.map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
                     </option>
                   ))}
                 </select>
               </label>
+              {music.layout === 'corner' ? (
+                <>
+                  <label className="field">
+                    <span className="field-label">Corner of the screen</span>
+                    <select
+                      value={music.position}
+                      onChange={(e) =>
+                        updateItem(item.id, {
+                          music: { ...music, position: e.target.value as OverlayPosition }
+                        })
+                      }
+                    >
+                      {POSITIONS.map((p) => (
+                        <option key={p.value} value={p.value}>
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-              <label className="field">
-                <span className="field-label">
-                  Size <span>{Math.round(music.sizeScale * 100)}%</span>
-                </span>
-                <input
-                  type="range"
-                  min={1}
-                  max={6}
-                  step={0.25}
-                  value={music.sizeScale}
-                  onChange={(e) =>
-                    updateItem(item.id, { music: { ...music, sizeScale: Number(e.target.value) } })
-                  }
-                />
-              </label>
+                  <label className="field">
+                    <span className="field-label">
+                      Size <span>{Math.round(music.sizeScale * 100)}%</span>
+                    </span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={6}
+                      step={0.25}
+                      value={music.sizeScale}
+                      onChange={(e) =>
+                        updateItem(item.id, {
+                          music: { ...music, sizeScale: Number(e.target.value) }
+                        })
+                      }
+                    />
+                  </label>
+                </>
+              ) : (
+                <p className="inspector-hint">
+                  The video fills one half of the screen and each slide&apos;s text moves to the
+                  other half, so nothing is covered. Picture slides move over too.
+                </p>
+              )}
 
               <label className="checkbox-row">
                 <input

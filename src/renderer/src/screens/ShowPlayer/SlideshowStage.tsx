@@ -6,6 +6,7 @@ import type { PopupVideoHandle } from './PopupVideoOverlay'
 import TransitionLayer from './TransitionLayer'
 import { enterDurationMs } from './transitions'
 import SlideFrameView from './SlideFrameView'
+import { splitVideoSide } from '@shared/factory'
 
 interface FrameStackEntry {
   /** An ever-incrementing step counter (not a frame index) so slides can loop
@@ -38,6 +39,7 @@ export default function SlideshowStage({
 }): React.JSX.Element {
   const frames = item.frames
   const loopUntilVideoEnds = item.music?.kind === 'video' && item.music.loopSlidesUntilEnd
+  const videoSide = splitVideoSide(item.music)
   const [stack, setStack] = useState<FrameStackEntry[]>(() => [{ key: 0, frame: frames[0] }])
   /** Key of the frame on top; only it may advance (ref so a duplicate completion event
    * before the next render can't advance twice). */
@@ -59,6 +61,7 @@ export default function SlideshowStage({
         token = popupVideo?.play(m.fileName, {
           volume: m.volume,
           fadeInSec: m.fadeInSec,
+          layout: m.layout,
           position: m.position,
           sizeScale: m.sizeScale,
           onEnded: m.loopSlidesUntilEnd ? () => onDoneRef.current() : undefined
@@ -105,6 +108,7 @@ export default function SlideshowStage({
               frame={layer.frame}
               dir={dir}
               paused={paused && isTop}
+              videoSide={videoSide}
               onDone={() => advanceFrame(layer.key)}
             />
           </TransitionLayer>

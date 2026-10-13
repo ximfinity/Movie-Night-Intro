@@ -16,6 +16,11 @@ export type OverlayPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom
 
 export type SlideMusicKind = 'audio' | 'video'
 
+/** How a pop-up video shares the screen with the slides: 'corner' floats it over the
+ * slides; 'video-left' / 'video-right' split the screen, with the video on that side and
+ * the slide text moved to the other half so nothing is covered. */
+export type PopupVideoLayout = 'corner' | 'video-left' | 'video-right'
+
 export interface SlideMusic {
   /** 'audio' plays as a plain background track. 'video' plays the clip's picture too,
    * as a small pop-up-video-style overlay in one corner of the screen. */
@@ -26,8 +31,10 @@ export interface SlideMusic {
   fadeInSec: number
   fadeOutSec: number
   /** Only meaningful when kind is 'video'. */
+  layout: PopupVideoLayout
+  /** Only meaningful when kind is 'video' and layout is 'corner'. */
   position: OverlayPosition
-  /** Only meaningful when kind is 'video': size multiplier over the base 260x170 pop-up
+  /** Only meaningful when kind is 'video' and layout is 'corner': size multiplier over the base 260x170 pop-up
    * box (e.g. 3 = 780x510). */
   sizeScale: number
   /** Only meaningful when kind is 'video': keep rotating the slideshow's slides in a loop

@@ -394,3 +394,51 @@
     opacity: 1;
   }
 }
+
+/* Side-by-side pop-up video: the video takes one half of the screen and the slides move
+   their text (or picture) to the other half, so neither covers the other. */
+
+.popup-video-split {
+  top: 50%;
+  width: 46%;
+  aspect-ratio: 16 / 9;
+  transform: translateY(-50%);
+}
+.popup-video-split video {
+  object-fit: contain;
+}
+.popup-video-video-left {
+  left: 2.5%;
+}
+.popup-video-video-right {
+  right: 2.5%;
+}
+
+.slide-stage.slide-split-video-left {
+  padding: 8cqh 3cqw 8cqh 51cqw;
+}
+.slide-stage.slide-split-video-right {
+  padding: 8cqh 51cqw 8cqh 3cqw;
+}
+.slide-split .slide-content {
+  max-width: 46cqw;
+}
+.slide-split .slide-title {
+  font-size: 3.4cqw;
+}
+.slide-split .slide-subtitle {
+  font-size: 1.4cqw;
+}
+.slide-split .slide-list {
+  min-width: 0;
+  max-width: 46cqw;
+}
+.slide-split .slide-list-row {
+  font-size: 1.6cqw;
+}
+.slide-frame-image-only.slide-split-video-left .slide-bg-image {
+  left: 50%;
+}
+.slide-frame-image-only.slide-split-video-right .slide-bg-image {
+  right: 50%;
+}

@@ -6,6 +6,7 @@ import type {
   MediaLibrary,
   MediaRef,
   OverlayPosition,
+  PopupVideoLayout,
   PlaylistItem,
   ProjectData,
   SlideFrame,
@@ -34,6 +35,8 @@ const POSITIONS: OverlayPosition[] = [
   'bottom-right',
   'center'
 ]
+
+const VIDEO_LAYOUTS: PopupVideoLayout[] = ['corner', 'video-left', 'video-right']
 
 function isObj(v: unknown): v is Raw {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -116,6 +119,7 @@ function normalizeSlideMusic(raw: unknown): SlideMusic | null {
     volume: num(raw.volume, 0.8, 0, 1),
     fadeInSec: num(raw.fadeInSec, 1.5, 0, 30),
     fadeOutSec: num(raw.fadeOutSec, 1.5, 0, 30),
+    layout: oneOf(raw.layout, VIDEO_LAYOUTS, 'corner'),
     position: oneOf(raw.position, POSITIONS, 'bottom-left'),
     sizeScale: num(raw.sizeScale, 3, 0.5, 10),
     loopSlidesUntilEnd: raw.loopSlidesUntilEnd === true

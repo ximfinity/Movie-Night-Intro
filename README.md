@@ -49,8 +49,10 @@ transitions and animations.
   ⠿ to reorder (mouse or keyboard). ⧉ duplicates a slide and copies it for pasting into
   another group.
 - **Music or pop-up video per group** — an audio track plays quietly under the rotating
-  slides, or a video plays in a resizable corner box (100%–600%), optionally repeating the
-  slides until the video ends. Switching to another file keeps your volume/size settings.
+  slides, or a video plays alongside them: **side by side** (video on one half, the slide
+  text moved to the other so nothing is covered) or in a resizable corner box (100%–600%),
+  optionally repeating the slides until the video ends. The editor preview shows where the
+  video will sit. Switching to another file keeps your volume/size settings.
 
 ### AI subtitles from any chat (no API key)
 

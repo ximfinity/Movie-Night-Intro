@@ -35,13 +35,17 @@ export default function SlideFrameView({
   dir,
   paused,
   onDone,
-  preview = false
+  preview = false,
+  videoSide = null
 }: {
   frame: SlideFrame
   dir: string
   paused: boolean
   onDone: () => void
   preview?: boolean
+  /** A side-by-side pop-up video is on this half of the screen: the slide's text (or
+   * picture) moves to the other half so the video doesn't cover it. */
+  videoSide?: 'left' | 'right' | null
 }): React.JSX.Element {
   useFrameTimer(frame.durationSec, paused, onDone)
 
@@ -123,9 +127,11 @@ export default function SlideFrameView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frame.id, frame.content, frame.textAnimation])
 
+  const splitClass = videoSide ? `slide-split slide-split-video-${videoSide}` : ''
+
   if (frame.content === 'image') {
     return (
-      <div className="stage slide-frame-image-only">
+      <div className={`stage slide-frame-image-only ${splitClass}`}>
         {bgImageUrl && (
           <div
             ref={kenBurnsRef}
@@ -139,7 +145,7 @@ export default function SlideFrameView({
 
   return (
     <div
-      className="stage slide-stage"
+      className={`stage slide-stage ${splitClass}`}
       style={{ background: theme.background, color: theme.textColor }}
     >
       {bgImageUrl && (

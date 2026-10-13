@@ -1,5 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, useState } from 'react'
-import type { OverlayPosition } from '@shared/types'
+import type { OverlayPosition, PopupVideoLayout } from '@shared/types'
 import { mediaFileUrl } from '@shared/paths'
 import { ScaledVolume } from '../../lib/showVolume'
 
@@ -15,6 +15,7 @@ export interface PopupVideoHandle {
     opts: {
       volume: number
       fadeInSec: number
+      layout: PopupVideoLayout
       position: OverlayPosition
       sizeScale: number
       /** Called once when this clip finishes playing on its own, or fails to play (not on
@@ -26,7 +27,7 @@ export interface PopupVideoHandle {
   stopImmediately: () => void
 }
 
-/** A small always-mounted corner video, played imperatively (like the audio background
+/** An always-mounted pop-up video (a corner box, or one half of the screen), played imperatively (like the audio background
  * music controller) so a single persistent <video> element can be reused across a whole
  * show rather than remounted per slideshow item. */
 export default function PopupVideoOverlay({
@@ -44,6 +45,7 @@ export default function PopupVideoOverlay({
   const onEndedRef = useRef<(() => void) | undefined>(undefined)
   const ownerRef = useRef(0)
   const [visible, setVisible] = useState(false)
+  const [layout, setLayout] = useState<PopupVideoLayout>('corner')
   const [position, setPosition] = useState<OverlayPosition>('bottom-left')
   const [sizeScale, setSizeScale] = useState(3)
 
@@ -66,6 +68,7 @@ export default function PopupVideoOverlay({
         const token = ++ownerRef.current
         const el = videoRef.current
         if (!el) return token
+        setLayout(opts.layout)
         setPosition(opts.position)
         setSizeScale(opts.sizeScale)
         onEndedRef.current = opts.onEnded
@@ -128,13 +131,20 @@ export default function PopupVideoOverlay({
     onEndedRef.current?.()
   }
 
+  // Side by side, the video fills its half of the screen (the slides move their text to
+  // the other half); in a corner it's a fixed-size box over the slides.
+  const split = layout !== 'corner'
   return (
     <div
-      className={`popup-video popup-video-${position} ${visible ? '' : 'popup-video-hidden'}`}
-      style={{
-        width: POPUP_VIDEO_BASE_WIDTH * sizeScale,
-        height: POPUP_VIDEO_BASE_HEIGHT * sizeScale
-      }}
+      className={`popup-video ${split ? `popup-video-split popup-video-${layout}` : `popup-video-${position}`} ${visible ? '' : 'popup-video-hidden'}`}
+      style={
+        split
+          ? undefined
+          : {
+              width: POPUP_VIDEO_BASE_WIDTH * sizeScale,
+              height: POPUP_VIDEO_BASE_HEIGHT * sizeScale
+            }
+      }
     >
       <video ref={videoRef} onEnded={() => onEndedRef.current?.()} onError={handleFailed} />
     </div>

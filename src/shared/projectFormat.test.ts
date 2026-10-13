@@ -42,6 +42,20 @@ describe('normalizeProject', () => {
     expect(item.frames[0].subtitleOptions).toEqual(['Grab a seat'])
     expect(item.music?.kind).toBe('audio')
     expect(item.music?.loopSlidesUntilEnd).toBe(false)
+    expect(item.music?.layout).toBe('corner')
+  })
+
+  it('keeps a side-by-side pop-up video layout and repairs unknown ones', () => {
+    const music = (layout: unknown): unknown => ({
+      type: 'slideshow',
+      frames: [{ title: 'Hi' }],
+      music: { kind: 'video', fileName: 'clip.mp4', layout }
+    })
+    const p = normalizeProject({
+      items: [music('video-left'), music('video-right'), music('sideways')]
+    })
+    const layouts = p.items.map((i) => (i as SlideshowItem).music?.layout)
+    expect(layouts).toEqual(['video-left', 'video-right', 'corner'])
   })
 
   it('repairs bad values instead of crashing the show', () => {
