@@ -203,3 +203,19 @@ describe('trivia rounds', () => {
     expect(collectMediaRefs(p).map((r) => r.fileName)).toContain('song.mp3')
   })
 })
+
+describe('stacked pop-up video layouts', () => {
+  it('keeps video-top and video-bottom', () => {
+    const p = normalizeProject({
+      items: ['video-top', 'video-bottom'].map((layout) => ({
+        type: 'slideshow',
+        frames: [{ title: 'Hi' }],
+        music: { kind: 'video', fileName: 'clip.mp4', layout }
+      }))
+    })
+    expect(p.items.map((i) => (i as SlideshowItem).music?.layout)).toEqual([
+      'video-top',
+      'video-bottom'
+    ])
+  })
+})

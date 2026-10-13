@@ -50,6 +50,8 @@ const ANIMATIONS: { value: TextAnimation; label: string }[] = [
 const VIDEO_LAYOUTS: { value: PopupVideoLayout; label: string }[] = [
   { value: 'video-left', label: 'Side by side: video left, text right' },
   { value: 'video-right', label: 'Side by side: video right, text left' },
+  { value: 'video-top', label: 'Stacked: big video on top, text below' },
+  { value: 'video-bottom', label: 'Stacked: text on top, big video below' },
   { value: 'corner', label: 'Pop-up box in a corner (over the slides)' }
 ]
 
@@ -403,8 +405,10 @@ function MusicSettings({ item }: { item: SlideshowItem }): React.JSX.Element {
                 </>
               ) : (
                 <p className="inspector-hint">
-                  The video fills one half of the screen and each slide&apos;s text moves to the
-                  other half, so nothing is covered. Picture slides move over too.
+                  {music.layout === 'video-left' || music.layout === 'video-right'
+                    ? 'The video fills one half of the screen and each slide’s text moves to the other half, so nothing is covered.'
+                    : 'The video gets most of the screen (bigger than side by side) and each slide’s text moves to a strip on the other side. Keep titles short; lists show in two columns.'}{' '}
+                  Picture slides move over too.
                 </p>
               )}
 

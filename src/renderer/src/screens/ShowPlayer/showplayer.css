@@ -454,3 +454,65 @@
 .slide-frame-image-only.slide-split-video-right .slide-bg-image {
   right: 50%;
 }
+
+/* Stacked pop-up video: a big video across the top (or bottom) ~62% of the screen and the
+   slide text in the strip left over. */
+
+.popup-video-video-top,
+.popup-video-video-bottom {
+  top: auto;
+  left: 50%;
+  width: auto;
+  height: 62%;
+  max-width: 94%;
+  translate: -50% 0;
+}
+.popup-video-video-top {
+  top: 3%;
+}
+.popup-video-video-bottom {
+  bottom: 3%;
+}
+
+.slide-stage.slide-split-video-top {
+  justify-content: center;
+  padding: 67cqh 5cqw 3cqh;
+}
+.slide-stage.slide-split-video-bottom {
+  justify-content: center;
+  padding: 3cqh 5cqw 67cqh;
+}
+.slide-split-video-top .slide-content,
+.slide-split-video-bottom .slide-content {
+  max-width: 90cqw;
+}
+.slide-split-video-top .slide-title,
+.slide-split-video-bottom .slide-title {
+  font-size: 3cqw;
+}
+.slide-split-video-top .slide-subtitle,
+.slide-split-video-bottom .slide-subtitle {
+  margin-top: 1.2cqh;
+  font-size: 1.5cqw;
+}
+/* Lists get two columns so they fit the short strip. */
+.slide-split-video-top .slide-list,
+.slide-split-video-bottom .slide-list {
+  margin-top: 1.4cqh;
+  max-width: 86cqw;
+  min-width: 60cqw;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 4cqw;
+}
+.slide-split-video-top .slide-list-row,
+.slide-split-video-bottom .slide-list-row {
+  font-size: 1.4cqw;
+  padding: 0.2cqh 0;
+}
+.slide-frame-image-only.slide-split-video-top .slide-bg-image {
+  top: 66%;
+}
+.slide-frame-image-only.slide-split-video-bottom .slide-bg-image {
+  bottom: 66%;
+}

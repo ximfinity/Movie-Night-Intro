@@ -58,7 +58,8 @@ transitions and animations.
   another group.
 - **Music or pop-up video per group** — an audio track plays quietly under the rotating
   slides, or a video plays alongside them: **side by side** (video on one half, the slide
-  text moved to the other so nothing is covered) or in a resizable corner box (100%–600%),
+  text moved to the other so nothing is covered), **stacked** (a bigger video across the
+  top or bottom, with the text in a strip on the other side) or in a resizable corner box (100%–600%),
   optionally repeating the slides until the video ends. The editor preview shows where the
   video will sit. Switching to another file keeps your volume/size settings.
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
-import type { SlideFrame } from '@shared/types'
+import type { SlideFrame, VideoSide } from '@shared/types'
 import { cssUrl, mediaFileUrl } from '@shared/paths'
 import { RANDOM_THEME, SLIDE_THEMES, findSlideTheme } from '@shared/slideThemes'
 import { createShuffleBag } from '@shared/shuffleBag'
@@ -45,7 +45,7 @@ export default function SlideFrameView({
   preview?: boolean
   /** A side-by-side pop-up video is on this half of the screen: the slide's text (or
    * picture) moves to the other half so the video doesn't cover it. */
-  videoSide?: 'left' | 'right' | null
+  videoSide?: VideoSide | null
 }): React.JSX.Element {
   useFrameTimer(frame.durationSec, paused, onDone)
 

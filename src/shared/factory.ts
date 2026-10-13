@@ -8,6 +8,7 @@ import type {
   SlideFrame,
   SlideFrameContent,
   SlideMusic,
+  VideoSide,
   SlideshowItem,
   VideoItem
 } from './types'
@@ -158,7 +159,7 @@ export function hasFeatureMovie(feature: FeatureConfig): boolean {
 
 /** Which half of the screen a side-by-side pop-up video takes, or null when the slides
  * have the whole screen (no video, or a corner pop-up). */
-export function splitVideoSide(m: SlideMusic | null | undefined): 'left' | 'right' | null {
-  if (m?.kind !== 'video') return null
-  return m.layout === 'video-left' ? 'left' : m.layout === 'video-right' ? 'right' : null
+export function splitVideoSide(m: SlideMusic | null | undefined): VideoSide | null {
+  if (m?.kind !== 'video' || m.layout === 'corner') return null
+  return m.layout.slice('video-'.length) as VideoSide
 }

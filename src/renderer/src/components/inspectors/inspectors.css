@@ -961,3 +961,18 @@ kbd {
   font-size: 12px;
   opacity: 0.75;
 }
+.slide-preview-video-video-top,
+.slide-preview-video-video-bottom {
+  top: auto;
+  left: 50%;
+  width: auto;
+  height: 62%;
+  max-width: 94%;
+  transform: translateX(-50%);
+}
+.slide-preview-video-video-top {
+  top: 3%;
+}
+.slide-preview-video-video-bottom {
+  bottom: 3%;
+}

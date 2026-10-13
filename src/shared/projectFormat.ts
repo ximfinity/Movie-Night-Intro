@@ -39,7 +39,13 @@ const POSITIONS: OverlayPosition[] = [
   'center'
 ]
 
-const VIDEO_LAYOUTS: PopupVideoLayout[] = ['corner', 'video-left', 'video-right']
+const VIDEO_LAYOUTS: PopupVideoLayout[] = [
+  'corner',
+  'video-left',
+  'video-right',
+  'video-top',
+  'video-bottom'
+]
 
 function isObj(v: unknown): v is Raw {
   return typeof v === 'object' && v !== null && !Array.isArray(v)

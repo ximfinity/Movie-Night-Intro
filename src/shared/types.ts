@@ -17,9 +17,14 @@ export type OverlayPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom
 export type SlideMusicKind = 'audio' | 'video'
 
 /** How a pop-up video shares the screen with the slides: 'corner' floats it over the
- * slides; 'video-left' / 'video-right' split the screen, with the video on that side and
+ * slides; 'video-left' / 'video-right' / 'video-top' / 'video-bottom' split the screen,
+ * with the video on that side (top/bottom gives it a bigger, full-width-ish picture) and
  * the slide text moved to the other half so nothing is covered. */
-export type PopupVideoLayout = 'corner' | 'video-left' | 'video-right'
+export type PopupVideoLayout =
+  'corner' | 'video-left' | 'video-right' | 'video-top' | 'video-bottom'
+
+/** Which part of the screen a split-screen pop-up video takes. */
+export type VideoSide = 'left' | 'right' | 'top' | 'bottom'
 
 export interface SlideMusic {
   /** 'audio' plays as a plain background track. 'video' plays the clip's picture too,
