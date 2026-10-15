@@ -1,0 +1,5 @@
+# Tells the itch.io app what to launch from the uploaded app folder.
+# https://itch.io/docs/itch/integrating/manifest.html
+[[actions]]
+name = "play"
+path = "movie-night-intro.exe"

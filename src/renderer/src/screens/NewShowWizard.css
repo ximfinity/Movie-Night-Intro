@@ -228,7 +228,9 @@
   margin-top: 2px;
 }
 
-.wizard-summary {
+/* More specific than the shared .inspector-hint, whose negative top margin would pull the
+   summary up into the last section card. */
+.wizard-body .wizard-summary {
   margin-top: 16px;
 }
 

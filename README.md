@@ -6,6 +6,9 @@ everyone knows when the movie starts, and a hand-off into the feature itself: a 
 shortly" hold screen, an "Our Feature Presentation" curtain card, the movie, and a
 "Thanks for coming" card. Run it all from your phone.
 
+**Download:** [ximfinity.itch.io/movie-night-intro](https://ximfinity.itch.io/movie-night-intro) or the
+[GitHub Releases](https://github.com/ximfinity/Movie-Night-Intro/releases).
+
 Built with Electron + React + TypeScript, with [GSAP](https://gsap.com) powering the
 transitions and animations.
 
@@ -205,7 +208,9 @@ This produces an NSIS installer under `dist/` (`movie-night-intro-<version>-setu
 that installs the app like any normal Windows program, with a desktop shortcut, no dev
 tools required on the show machine. CI (`.github/workflows/build-windows.yml`) lints,
 tests and builds on every push, and publishes a GitHub Release for `v*` tags or a manual
-run with **publish_release** checked.
+run with **publish_release** checked, and also uploads to
+[itch.io](https://ximfinity.itch.io/movie-night-intro) once it's connected. See
+[RELEASING.md](RELEASING.md); the itch.io page copy and images are in `docs/itch/`.
 
 ## Project structure
 
