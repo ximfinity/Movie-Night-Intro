@@ -3,7 +3,8 @@
 Running **Actions → Build Windows installer → Run workflow** with **"Publish the installer to a
 GitHub Release"** ticked (or pushing a `v*` tag) runs `.github/workflows/build-windows.yml`, which:
 
-1. lints, tests and builds the Windows installer, with the version from `package.json`,
+1. lints, tests and builds the Windows installer, with the version from `package.json`, and
+   signs it if code signing is set up (see below),
 2. publishes it as a **GitHub Release** (`movie-night-intro-1.7.0-setup.exe`), and
 3. pushes it to **itch.io** with [butler](https://itch.io/docs/butler/), if the itch.io settings
    below are present. Two channels go up:
@@ -35,12 +36,67 @@ a notice.
 - GitHub encrypts secrets, never shows them again, masks them in logs, and doesn't give them to
   pull requests from forks.
 
-### Optional: code signing
+## One-time setup: code signing (Azure Artifact Signing)
 
-The installer isn't code-signed, so Windows SmartScreen shows "Windows protected your PC" until
-people click **More info → Run anyway** (the page explains this). A code-signing certificate
-removes that warning; electron-builder can use one via the `CSC_LINK` and `CSC_KEY_PASSWORD`
-secrets.
+Signing puts your name on the installer as the verified publisher instead of "Unknown
+publisher", and stops Windows treating every download as suspicious. Since 2023, signing keys
+must live on secure hardware, so a plain certificate file can't be used from GitHub Actions any
+more. Microsoft's **Azure Artifact Signing** (formerly "Trusted Signing") is a cloud service
+that works here: about **$9.99/month**, open to individual developers in the **US and Canada**
+(and to organizations).
+
+Releases are signed automatically once the `AZURE_CLIENT_SECRET` secret exists. Everyday builds
+(every push) stay unsigned so they don't use up signatures.
+
+### 1. Create the signing account (Azure portal)
+
+1. Sign in at https://portal.azure.com with a **pay-as-you-go** subscription (free and trial
+   subscriptions aren't accepted).
+2. **Subscriptions → your subscription → Resource providers**: register
+   `Microsoft.CodeSigning`.
+3. Search for **Artifact Signing** (or **Trusted Signing**) and **Create** an account: pick a
+   resource group, a name (this is the *account name*), a region near you, and the **Basic** plan.
+   Open it and copy its **Account URI**, for example `https://eus.codesigning.azure.net/` (this
+   is the *endpoint*).
+4. On the account, **Access control (IAM) → Add role assignment**: give yourself
+   **Artifact Signing Identity Verifier** (older name: *Trusted Signing Identity Verifier*).
+5. **Identity validations → New → Public → Individual**, and follow the steps with your photo ID.
+   Microsoft checks it; plan for a few business days.
+6. When it shows **Completed**, **Certificate profiles → Create → Public Trust**: pick the
+   validation and a name (this is the *certificate profile name*). The name on the validation
+   (usually your legal name) is the *publisher name*.
+
+### 2. Let GitHub sign with it
+
+1. **Microsoft Entra ID → App registrations → New registration**, name it e.g.
+   `movie-night-intro-signing`, and register. Copy the **Directory (tenant) ID** and the
+   **Application (client) ID**.
+2. In the app registration: **Certificates & secrets → New client secret**. Copy the secret's
+   **Value** (not its ID) straight into GitHub in the next step. Secrets expire (at most 24
+   months), so set yourself a reminder to replace it.
+3. Back on the signing account: **Access control (IAM) → Add role assignment** →
+   **Artifact Signing Certificate Profile Signer** (older name: *Trusted Signing Certificate
+   Profile Signer*) → assign it to the app registration.
+4. In this GitHub repo, **Settings → Secrets and variables → Actions**:
+
+   | Kind | Name | Value |
+   |---|---|---|
+   | Secret | `AZURE_TENANT_ID` | Directory (tenant) ID |
+   | Secret | `AZURE_CLIENT_ID` | Application (client) ID |
+   | Secret | `AZURE_CLIENT_SECRET` | the client secret's value |
+   | Variable | `AZURE_SIGNING_ENDPOINT` | the account URI, e.g. `https://eus.codesigning.azure.net/` |
+   | Variable | `AZURE_SIGNING_ACCOUNT` | the signing account name |
+   | Variable | `AZURE_SIGNING_PROFILE` | the certificate profile name |
+   | Variable | `AZURE_SIGNING_PUBLISHER` | the publisher name, exactly as on the certificate |
+
+The next release is signed, and the workflow checks that both the installer and the app's
+`.exe` carry a valid signature before publishing anything. If any of these settings is missing,
+the release stops with a message naming it rather than going out unsigned by accident.
+
+After the first signed release, update the itch.io page: in `docs/itch/PAGE.md` (Install),
+replace step 2 with *"Windows may still show a SmartScreen notice for a short while after a new
+version comes out; click **More info → Run anyway**."* SmartScreen also builds trust from download
+history, so a brand-new signer can still see that notice at first.
 
 ## Cutting a release
 

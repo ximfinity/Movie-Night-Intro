@@ -23,6 +23,10 @@ jobs:
       # Set both to also publish to itch.io (see RELEASING.md); without them that step is skipped.
       BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
       ITCH_TARGET: ${{ vars.ITCH_TARGET }} # e.g. yourname/movie-night-intro
+      PUBLISHING: ${{ startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_release == 'true' }}
+      # Code signing with Azure Artifact Signing (see RELEASING.md). Releases are signed once
+      # the AZURE_CLIENT_SECRET secret exists; everyday builds stay unsigned.
+      SIGNING: ${{ secrets.AZURE_CLIENT_SECRET != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,7 +46,49 @@ jobs:
           npm test
 
       - name: Build Windows installer
+        if: env.PUBLISHING != 'true' || env.SIGNING != 'true'
         run: npm run build:win
+
+      - name: Build signed Windows installer
+        if: env.PUBLISHING == 'true' && env.SIGNING == 'true'
+        shell: pwsh
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          SIGN_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          SIGN_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          SIGN_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+          SIGN_PUBLISHER: ${{ vars.AZURE_SIGNING_PUBLISHER }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($name in 'AZURE_TENANT_ID', 'AZURE_CLIENT_ID', 'SIGN_ENDPOINT', 'SIGN_ACCOUNT', 'SIGN_PROFILE', 'SIGN_PUBLISHER') {
+            if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue).Value) {
+              Write-Output "::error::Code signing is half set up: $name is missing (see RELEASING.md)"
+              exit 1
+            }
+          }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npx electron-builder --win --publish never `
+            "-c.win.azureSignOptions.endpoint=$env:SIGN_ENDPOINT" `
+            "-c.win.azureSignOptions.codeSigningAccountName=$env:SIGN_ACCOUNT" `
+            "-c.win.azureSignOptions.certificateProfileName=$env:SIGN_PROFILE" `
+            "-c.win.azureSignOptions.publisherName=$env:SIGN_PUBLISHER"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Check signatures
+        if: env.PUBLISHING == 'true' && env.SIGNING == 'true'
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem dist/*-setup.exe) + @(Get-Item dist/win-unpacked/movie-night-intro.exe)
+          $bad = 0
+          foreach ($f in $files) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            Write-Output "$($f.Name): $($sig.Status) - $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -ne 'Valid') { $bad++ }
+          }
+          if ($bad -gt 0) { Write-Output '::error::Not every file is validly signed'; exit 1 }
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
