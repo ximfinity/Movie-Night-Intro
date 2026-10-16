@@ -1,6 +1,6 @@
 {
   "name": "movie-night-intro",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "The pre-show for your movie night: rotating slides, trivia rounds, video and music, a countdown to showtime and a curtains-up intro, run from your phone.",
   "main": "./out/main/index.js",
   "author": "ximfinity",
