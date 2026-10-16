@@ -1,5 +1,12 @@
 appId: com.movienightintro.app
 productName: Movie Night Intro
+copyright: Copyright © 2026 ximfinity
+# Shipped next to the app (and in the itch.io / portable folder) so the licenses travel with it.
+extraFiles:
+  - from: LICENSE
+    to: LICENSE.txt
+  - from: THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
 directories:
   buildResources: build
 files:

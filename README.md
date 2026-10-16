@@ -242,3 +242,17 @@ src/
 4. Add **🎬 Video Clips**, music or a pop-up video per group; drag to reorder.
 5. Turn on **📱 Remote**, open it on your phone, then **Save** and **Start Show** (from
    the PC or the phone).
+
+## License
+
+Movie Night Intro is free and open source under the [MIT License](LICENSE): you may use, copy,
+modify and share the code, including in your own projects, as long as you keep the copyright
+and license notice.
+
+The app also bundles third-party libraries under their own licenses, listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Most are MIT; note that the animation library
+[GSAP](https://gsap.com) is free to use but not open source, under its own
+[Standard "No Charge" License](https://gsap.com/standard-license).
+
+Contributions are welcome. By opening a pull request you agree that your contribution is
+released under the same MIT License.

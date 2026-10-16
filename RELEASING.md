@@ -45,6 +45,10 @@ more. Microsoft's **Azure Artifact Signing** (formerly "Trusted Signing") is a c
 that works here: about **$9.99/month**, open to individual developers in the **US and Canada**
 (and to organizations).
 
+(The free [SignPath Foundation](https://signpath.org) program for open-source projects
+requires *every* bundled component to be open source, and GSAP isn't, so it doesn't apply unless
+GSAP is replaced; see `THIRD_PARTY_NOTICES.md`.)
+
 Releases are signed automatically once the `AZURE_CLIENT_SECRET` secret exists. Everyday builds
 (every push) stay unsigned so they don't use up signatures.
 

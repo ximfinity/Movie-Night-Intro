@@ -146,6 +146,12 @@ Prefer not to install? Download the **portable version**, unzip it and run
 No account, no tracking and no ads. Your shows are saved as plain folders on your PC. The app only
 goes online for things you ask for: an AI service you connected, or a streaming link you added.
 
+## Open source
+
+Movie Night Intro is open source under the MIT License. The code is on
+[GitHub](https://github.com/ximfinity/Movie-Night-Intro), where you can also report bugs and
+suggest features.
+
 **Movie Night Intro is free.** If it made your movie night, a small donation keeps new features
 coming. ♥
 
@@ -158,6 +164,7 @@ coming. ♥
 | Genre | Other |
 | Tags | `movie-night`, `projector`, `slideshow`, `countdown`, `trivia`, `pta`, `party`, `halloween`, `christmas`, `windows` |
 | AI generation disclosure | Answer honestly for the code and the art/text. |
+| Links | `https://github.com/ximfinity/Movie-Night-Intro` (label: *Source code*) |
 | Community | **Comments** on |
 
 ## Step 6: Images
